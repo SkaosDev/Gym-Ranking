@@ -1,0 +1,18 @@
+{
+  "name": "gymrank",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gym performance tracker with physiology-calibrated ranks",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "setup": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "test": "cd server && npm test"
+  }
+}

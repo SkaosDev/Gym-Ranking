@@ -1,2 +1,17 @@
+# IDE
 .idea
 Gym Ranking.iml
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# SQLite database and its WAL sidecars
+*.db
+*.db-shm
+*.db-wal
+
+# Build output
+client/dist/
