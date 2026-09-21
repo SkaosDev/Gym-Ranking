@@ -13,7 +13,8 @@
     "test": "node --env-file-if-exists=../.env --test 'test/*.test.js'",
     "migrate": "node --env-file-if-exists=../.env scripts/migrate.mjs",
     "calibrate": "node scripts/calibrate.js",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "seed:demo": "node --env-file-if-exists=../.env scripts/seed-demo.mjs"
   },
   "dependencies": {
     "express": "^5.2.1",
