@@ -8,6 +8,8 @@ import { SESSION_COOKIE_NAME, SESSION_TTL_MS, SqliteSessionStore } from './lib/s
 import { errorHandler } from './middleware/errorHandler.js';
 import { jsonOnly } from './middleware/jsonOnly.js';
 import authRoutes from './routes/auth.js';
+import exerciseRoutes from './routes/exercises.js';
+import performanceRoutes from './routes/performances.js';
 
 const CLIENT_DIST = path.join(import.meta.dirname, '..', 'client', 'dist');
 
@@ -61,6 +63,8 @@ export function createApp({ sessionStore } = {}) {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/exercises', exerciseRoutes);
+  app.use('/api/performances', performanceRoutes);
 
   // Anything under /api that no route above claimed is a 404, not the SPA.
   app.use('/api', (req, res, next) => {

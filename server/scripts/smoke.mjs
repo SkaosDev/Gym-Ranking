@@ -174,7 +174,8 @@ async function phase4() {
     sex: 'M',
     birth_date: '1996-04-12',
     height_cm: 182,
-    weight_kg: 88.5,
+    // 90 kg so the bench set below reproduces reference case 1 end to end.
+    weight_kg: 90,
   };
 
   jar.clear();
@@ -266,11 +267,110 @@ async function phase4() {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 5 - performance CRUD, enrichment and the confirmation guard
+// Runs on the session phase 4 left signed in.
+// ---------------------------------------------------------------------------
+async function phase5() {
+  const exercises = await req('GET', '/api/exercises');
+  expect(
+    'GET /api/exercises returns the seven seeded exercises',
+    exercises.status === 200 && exercises.json?.items?.length === 7,
+    `got ${exercises.status} with ${exercises.json?.items?.length} items`,
+  );
+  const byCode = Object.fromEntries((exercises.json?.items ?? []).map((e) => [e.code, e]));
+
+  const created = await req('POST', '/api/performances', {
+    body: { exercise_id: byCode.bench?.id, weight_kg: 100, reps: 5, performed_at: '2026-06-15', notes: 'smoke' },
+  });
+  expect('POST /api/performances creates a set', created.status === 201, created.text.slice(0, 160));
+  // Reference case 1, all the way through the HTTP API: a 90 kg man benching
+  // 100 kg for 5 gives e1RM 114.58, DOTS 74.09, index 459.3, Gold V.
+  expect(
+    'reference case 1 reproduces end to end',
+    Math.abs((created.json?.e1rm_kg ?? 0) - 114.58) < 0.01 &&
+      Math.abs((created.json?.dots_points ?? 0) - 74.09) < 0.01 &&
+      Math.abs((created.json?.strength_index ?? 0) - 459.3) < 0.1 &&
+      created.json?.rank?.label === 'Gold V',
+    `e1RM ${created.json?.e1rm_kg}, DOTS ${created.json?.dots_points}, ` +
+      `index ${created.json?.strength_index}, rank ${created.json?.rank?.label}`,
+  );
+  expect(
+    'it names the kilograms needed for the next division',
+    (created.json?.next_division?.kg_needed ?? 0) > 0,
+    JSON.stringify(created.json?.next_division),
+  );
+
+  const list = await req('GET', '/api/performances?exercise=bench&sort=date_desc');
+  expect(
+    'GET /api/performances lists and filters',
+    list.status === 200 && list.json.items.some((row) => row.id === created.json.id),
+    `got ${list.status} with ${list.json?.items?.length} rows`,
+  );
+
+  const updated = await req('PATCH', `/api/performances/${created.json.id}`, { body: { weight_kg: 105 } });
+  expect(
+    'PATCH rescores the row',
+    updated.status === 200 && updated.json.weight_kg === 105 && updated.json.e1rm_kg > created.json.e1rm_kg,
+    `got ${updated.status}`,
+  );
+
+  const endurance = await req('POST', '/api/performances', {
+    body: { exercise_id: byCode.squat?.id, weight_kg: 60, reps: 20, performed_at: '2026-06-15' },
+  });
+  expect(
+    'a set above 12 reps is kept but excluded from the rank',
+    endurance.status === 201 &&
+      endurance.json.e1rm_kg === null &&
+      endurance.json.counts_toward_rank === false,
+    `e1RM ${endurance.json?.e1rm_kg}, counts ${endurance.json?.counts_toward_rank}`,
+  );
+
+  await req('POST', '/api/performances', {
+    body: { exercise_id: byCode.deadlift?.id, weight_kg: 150, reps: 1, performed_at: '2026-06-01' },
+  });
+  const jump = await req('POST', '/api/performances', {
+    body: { exercise_id: byCode.deadlift?.id, weight_kg: 250, reps: 1, performed_at: '2026-06-02' },
+  });
+  expect(
+    'a jump beyond 25% is flagged and held out of the rank',
+    jump.json?.needs_confirmation === true && jump.json?.counts_toward_rank === false,
+    `flag ${jump.json?.needs_confirmation}, counts ${jump.json?.counts_toward_rank}`,
+  );
+
+  const confirmed = await req('POST', `/api/performances/${jump.json.id}/confirm`);
+  expect(
+    'confirming it by hand lets it count again',
+    confirmed.status === 200 &&
+      confirmed.json.needs_confirmation === false &&
+      confirmed.json.counts_toward_rank === true,
+    `got ${confirmed.status}`,
+  );
+
+  const removed = await req('DELETE', `/api/performances/${created.json.id}`);
+  const gone = await req('GET', `/api/performances/${created.json.id}`);
+  expect(
+    'DELETE removes it for good',
+    removed.status === 200 && gone.status === 404,
+    `delete ${removed.status}, fetch ${gone.status}`,
+  );
+
+  const validation = await req('POST', '/api/performances', {
+    body: { exercise_id: byCode.squat?.id, weight_kg: -20, reps: 0, performed_at: '2099-01-01' },
+  });
+  expect(
+    'invalid input is refused with per-field messages',
+    validation.status === 422 && Object.keys(validation.json?.error?.fields ?? {}).length >= 2,
+    `got ${validation.status}`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log(`\nGymRank smoke checks against ${BASE}\n`);
   await waitForServer();
   await phase1();
   await phase4();
+  await phase5();
 
   const nameWidth = Math.max(...results.map((r) => r.name.length), 6);
   console.log(`${'CHECK'.padEnd(nameWidth)}  RESULT  DETAIL`);
