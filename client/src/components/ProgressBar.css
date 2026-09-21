@@ -1,0 +1,20 @@
+.progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress__fill {
+  height: 100%;
+  width: var(--progress-value);
+  background: var(--progress-fill);
+  border-radius: inherit;
+}
+
+.progress__caption {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}

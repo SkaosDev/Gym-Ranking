@@ -1,0 +1,46 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+
+/* The accent stripe carries the rank colour onto the card itself. */
+.card--accented {
+  border-top: 2px solid var(--card-accent, var(--border));
+}
+
+.card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.card__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.card__icon {
+  color: var(--card-accent, var(--text-muted));
+  margin-top: 0.2em;
+}
+
+.card__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.card__subtitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.card__body > :last-child {
+  margin-bottom: 0;
+}

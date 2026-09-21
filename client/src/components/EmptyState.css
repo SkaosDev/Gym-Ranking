@@ -1,0 +1,28 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.empty-state__icon {
+  font-size: var(--text-2xl);
+  color: var(--text-faint);
+}
+
+.empty-state__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.empty-state__body {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

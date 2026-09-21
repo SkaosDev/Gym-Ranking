@@ -1,0 +1,19 @@
+.spinner {
+  display: inline-flex;
+  align-items: center;
+}
+
+.spinner__disc {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spinner-turn 0.7s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
