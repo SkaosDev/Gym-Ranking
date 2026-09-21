@@ -609,3 +609,160 @@ tbody tr:last-child td {
 .recent-list li:last-child {
   border-bottom: 0;
 }
+
+/* Dashboard rank cards. */
+.section-heading {
+  margin: var(--space-4) 0 var(--space-3);
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+}
+
+.overall__headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.overall__index {
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.overall__index .muted {
+  font-size: var(--text-md);
+  font-weight: 400;
+}
+
+.exercise-card__top {
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.exercise-card__index {
+  font-size: var(--text-sm);
+}
+
+.next-line {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+}
+
+.next-line strong {
+  color: var(--text);
+  font-size: var(--text-md);
+}
+
+.next-line--max {
+  color: var(--text-muted);
+}
+
+.decay-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--rank-gold);
+}
+
+/* Checkbox rows read as one line, not a stacked label. */
+.field--checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.field--checkbox input {
+  width: auto;
+  accent-color: var(--accent);
+}
+
+.field--checkbox label {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Rank explanation page. */
+.formula {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--border-strong);
+  background: var(--bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  overflow-x: auto;
+}
+
+.working {
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.working strong {
+  color: var(--text);
+}
+
+.figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: var(--space-3) 0 0;
+}
+
+.figure dt {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.figure dd {
+  margin: 2px 0 0;
+  font-size: var(--text-xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.figure__hint {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.step-card .table-wrap {
+  margin-top: var(--space-3);
+}
+
+.reached {
+  color: var(--positive);
+}
+
+/* A link sitting in a row of buttons has to match them. */
+.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.icon-link:hover {
+  background: var(--surface-raised);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+/* Buttons that follow a hint need room to breathe. */
+.form-actions {
+  margin-top: var(--space-3);
+}

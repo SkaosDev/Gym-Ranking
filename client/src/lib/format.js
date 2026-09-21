@@ -46,3 +46,12 @@ export function formatKg(value, decimals = 1) {
   if (value === null || value === undefined) return '—';
   return `${formatNumber(value, decimals)} kg`;
 }
+
+/**
+ * Strength index, always rounded DOWN. Rounding up could show 410 next to a
+ * Silver II badge when Silver I begins at 410, which reads as a bug.
+ */
+export function formatIndex(value) {
+  if (value === null || value === undefined) return '\u2014';
+  return Math.floor(value).toLocaleString(LOCALE);
+}

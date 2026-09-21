@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import AsyncView from '../components/AsyncView.jsx';
 import Card from '../components/Card.jsx';
@@ -9,7 +10,7 @@ import RankBadge from '../components/RankBadge.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { exerciseIcon } from '../components/icons.js';
 import { api } from '../lib/api.js';
-import { formatDate, formatKg, formatNumber } from '../lib/format.js';
+import { formatDate, formatIndex, formatKg, formatNumber } from '../lib/format.js';
 import PerformanceForm from './PerformanceForm.jsx';
 
 function describeSet(row) {
@@ -222,7 +223,7 @@ export default function Performances() {
                       <td>{describeSet(row)}</td>
                       <td className="numeric">{formatKg(row.e1rm_kg)}</td>
                       <td className="numeric">{formatNumber(row.dots_points)}</td>
-                      <td className="numeric">{formatNumber(row.strength_index, 0)}</td>
+                      <td className="numeric">{formatIndex(row.strength_index)}</td>
                       <td>
                         <RankBadge rank={row.rank} size="sm" />
                         {!row.counts_toward_rank && row.flags.length > 0 && (
@@ -245,6 +246,16 @@ export default function Performances() {
                               Confirm
                             </button>
                           )}
+                          <Link
+                            to={`/rank-explained/${row.id}`}
+                            className="button--quiet button--icon button--small icon-link"
+                          >
+                            <Icon name="info" />
+                            <span className="visually-hidden">
+                              Explain the rank for {row.exercise_label} on{' '}
+                              {formatDate(row.performed_at)}
+                            </span>
+                          </Link>
                           <button
                             type="button"
                             className="button--quiet button--icon button--small"
