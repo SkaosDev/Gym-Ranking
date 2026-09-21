@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Login from './pages/Login.jsx';
+import Performances from './pages/Performances.jsx';
 import Signup from './pages/Signup.jsx';
 
 const DISCLAIMER =
@@ -47,6 +48,7 @@ export default function App() {
 
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/performances" element={<Performances />} />
             </Route>
 
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
