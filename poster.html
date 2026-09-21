@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GymRank poster</title>
+    <style>
+      /* One printable A4 page. Sized in millimetres so what prints matches
+         what the screen shows, and system fonts only so nothing is fetched. */
+      @page {
+        size: A4 portrait;
+        margin: 8mm;
+      }
+
+      :root {
+        --ink: #14181d;
+        --ink-soft: #4a5560;
+        --ink-faint: #7b8794;
+        --rule: #d6dbe0;
+        --accent: #b8860b;
+        --panel: #f5f6f7;
+        --gold: #c9a227;
+        --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #9aa5b1;
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 8.2pt;
+        line-height: 1.32;
+      }
+
+      .poster {
+        width: 194mm;
+        height: 281mm;
+        margin: 8mm auto;
+        padding: 7mm 8mm;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        gap: 2.1mm;
+      }
+
+      /* ------------------------------------------------------------ head */
+      header {
+        border-bottom: 1mm solid var(--ink);
+        padding-bottom: 2.2mm;
+      }
+
+      .title-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6mm;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 24pt;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+
+      .authors {
+        font-size: 9.5pt;
+        color: var(--ink-soft);
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .authors strong {
+        color: var(--ink);
+      }
+
+      .tagline {
+        margin: 2.5mm 0 0;
+        font-size: 9.4pt;
+        color: var(--ink-soft);
+        max-width: 138mm;
+      }
+
+      /* ------------------------------------------------------------ grid */
+      .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+      }
+
+      .columns--arch {
+        grid-template-columns: 1.55fr 1fr;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
+      }
+
+      .example {
+        margin: 1.5mm 0 0;
+        font-size: 7.2pt;
+        color: var(--ink-faint);
+      }
+
+      section h2 {
+        margin: 0 0 1.5mm;
+        font-size: 9pt;
+        letter-spacing: 0.02em;
+        color: var(--accent);
+        border-bottom: 0.3mm solid var(--rule);
+        padding-bottom: 1mm;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 4.5mm;
+      }
+
+      li {
+        margin-bottom: 1mm;
+      }
+
+      li strong {
+        color: var(--ink);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 0.3mm solid var(--rule);
+        padding: 2.2mm;
+      }
+
+      /* ----------------------------------------------------- screenshots */
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2.5mm;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      figure img {
+        width: 100%;
+        display: block;
+        border: 0.3mm solid var(--rule);
+        background: #14181d;
+      }
+
+      /* The captures have different shapes, so the page decides the shape
+         rather than the screenshots. */
+      /* Letterboxed on the app's own background, so every shot is fully
+         visible, the boxes still line up, and the padding is invisible. */
+      .shots img {
+        aspect-ratio: 16 / 11;
+        object-fit: contain;
+        object-position: center;
+        padding: 1mm;
+      }
+
+      figcaption {
+        margin-top: 0.8mm;
+        font-size: 6.8pt;
+        color: var(--ink-faint);
+      }
+
+
+
+      /* ---------------------------------------------------- architecture */
+      pre {
+        margin: 0;
+        font-family: var(--mono);
+        font-size: 5.2pt;
+        line-height: 1.22;
+        white-space: pre;
+        overflow: hidden;
+      }
+
+      /* ----------------------------------------------------------- facts */
+      .facts {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2mm;
+        text-align: center;
+        margin-top: 2.5mm;
+      }
+
+      .fact {
+        border: 0.3mm solid var(--rule);
+        padding: 1.4mm 1mm;
+      }
+
+      .fact b {
+        display: block;
+        font-size: 13pt;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+
+      .fact span {
+        font-size: 7.4pt;
+        color: var(--ink-faint);
+      }
+
+      dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: 26mm 1fr;
+        row-gap: 1.2mm;
+        column-gap: 2mm;
+      }
+
+      dt {
+        color: var(--ink-faint);
+        font-size: 7.6pt;
+      }
+
+      dd {
+        margin: 0;
+        font-size: 7.6pt;
+      }
+
+      .spec {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 7.4pt;
+        line-height: 1.26;
+      }
+
+      .spec li {
+        margin-bottom: 0.6mm;
+      }
+
+      .spec b {
+        display: inline-block;
+        min-width: 19mm;
+        color: var(--ink-faint);
+        font-weight: 600;
+      }
+
+      .ranks {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.4mm;
+        margin-top: 1.5mm;
+      }
+
+      .rank-chip {
+        font-size: 7.2pt;
+        padding: 0.6mm 1.6mm;
+        border-left: 0.9mm solid var(--chip, var(--ink));
+        background: var(--panel);
+        white-space: nowrap;
+      }
+
+      footer {
+        margin-top: auto;
+        border-top: 0.3mm solid var(--rule);
+        padding-top: 2mm;
+        font-size: 6.8pt;
+        color: var(--ink-faint);
+        display: flex;
+        justify-content: space-between;
+        gap: 5mm;
+      }
+
+      .disclosure {
+        max-width: 118mm;
+      }
+
+      .disclosure b {
+        color: var(--ink-soft);
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        /* Only the screen margin goes: the 194 x 281mm box and its padding
+           are exactly the A4 printable area at the @page margin above, so
+           nothing reflows between what is previewed and what is printed. */
+        .poster {
+          margin: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="poster">
+      <header>
+        <div class="title-row">
+          <h1>GymRank</h1>
+          <p class="authors">
+            <strong>Cl&eacute;ment Royer</strong><br />
+            <strong>[ partner name ]</strong><br />
+            Software Engineering &middot; Phase 1
+          </p>
+        </div>
+        <p class="tagline">
+          A local web app that turns a gym logbook into a strength rank calibrated to your sex,
+          bodyweight and age, using the formulas competitive powerlifting actually uses.
+        </p>
+        <div class="facts">
+        <div class="fact"><b>7</b><span>exercises tracked</span></div>
+        <div class="fact"><b>40</b><span>ranks and divisions</span></div>
+        <div class="fact"><b>177</b><span>automated tests</span></div>
+        <div class="fact"><b>0</b><span>network calls at runtime</span></div>
+        </div>
+      </header>
+
+      <div class="shots">
+        <figure>
+          <img src="poster/dashboard.png" alt="The overall rank card showing Gold V and an index of 452 out of 1000" />
+          <figcaption>The overall rank, weighted across five lifts.</figcaption>
+        </figure>
+        <figure>
+          <img src="poster/progress.png" alt="A strength index chart rising through coloured rank thresholds" />
+          <figcaption>Six months against the rank thresholds.</figcaption>
+        </figure>
+        <figure>
+          <img src="poster/exercise-card.png" alt="An exercise card showing a Gold IV rank and the kilograms to the next division" />
+          <figcaption>Per exercise: the exact kilograms still needed.</figcaption>
+        </figure>
+      </div>
+
+      <section>
+        <h2>Key features</h2>
+        <div class="feature-grid">
+          <ul>
+            <li>
+              <strong>Calibrated to your body.</strong> DOTS bodyweight normalisation and the
+              Foster and McCulloch age tables, so one pull-up is not one number for everybody.
+            </li>
+            <li>
+              <strong>Absolute, never competitive.</strong> Thresholds are fixed in configuration,
+              so a rank never depends on another user. No leaderboard anywhere.
+            </li>
+            <li>
+              <strong>The next division, in kilograms</strong> &mdash; not just a badge and a bar.
+            </li>
+          </ul>
+          <ul>
+            <li>
+              <strong>Full CRUD with server-side validation</strong>, and a guard that holds an
+              implausible jump out of the rank until a second set confirms it.
+            </li>
+            <li><strong>Progress charts</strong> with rank thresholds behind the curve.</li>
+            <li>
+              <strong>Friends see ranks, never bodies.</strong> Bodyweight, loads, notes and date
+              of birth never leave the owner&rsquo;s account.
+            </li>
+          </ul>
+        </div>
+        <div class="ranks">
+          <span class="rank-chip" style="--chip: #8b949e">Iron</span>
+          <span class="rank-chip" style="--chip: #cd7f32">Bronze</span>
+          <span class="rank-chip" style="--chip: #a9a9a9">Silver</span>
+          <span class="rank-chip" style="--chip: #c9a227">Gold</span>
+          <span class="rank-chip" style="--chip: #3fb9a0">Platinum</span>
+          <span class="rank-chip" style="--chip: #3aa3d6">Diamond</span>
+          <span class="rank-chip" style="--chip: #9a5cd0">Master</span>
+          <span class="rank-chip" style="--chip: #ff3b30">Unkillable Demon King</span>
+          <span class="rank-chip" style="--chip: var(--rule)">each split into five divisions, V to I</span>
+        </div>
+      </section>
+
+      <div class="columns columns--arch">
+        <section>
+          <h2>Architecture</h2>
+          <div class="panel">
+            <pre>
+   Browser                          Express 5 API  (one Node process)                Data
+┌────────────────┐               ┌──────────────────────────────────────────┐   ┌──────────────┐
+│ React 18 SPA   │  fetch /api/* │ routes/      auth · me · performances    │   │  gymrank.db  │
+│ Vite · router  │ ─────────────►│              ranks · stats · friends     │   │              │
+│ recharts       │   JSON only   │ middleware/  requireAuth · validate      │   │  WAL journal │
+│                │               │              jsonOnly · errorHandler     │──►│  foreign     │
+│ 9 routes       │ ◄─────────────│ services/    performances · ranks        │   │  keys on     │
+│                │  session      │              stats · explain · friends   │   │              │
+│                │  cookie:      │ lib/  scoring.js ← pure, no database     │   │  one file    │
+│                │  HttpOnly     │       db.js · password.js · session.js   │   │  beside the  │
+└────────────────┘  SameSite=Lax └──────────────────────────────────────────┘   └──── code ────┘
+   built by Vite, served by Express in production           node:sqlite, built into Node 24</pre>
+          </div>
+        </section>
+
+        <section>
+          <h2>How a set becomes a rank</h2>
+          <div class="panel">
+            <pre>
+bar load + bodyweight factor
+        ↓
+estimated 1RM   Epley and Brzycki,
+                averaged
+        ↓
+DOTS points     ÷ P(bodyweight),
+                4th-degree fit
+        ↓
+age coefficient Foster 14-23
+                McCulloch 40+
+        ↓
+strength index  0-1000, between
+                published standards
+        ↓
+rank + division Iron V … UDK I</pre>
+          </div>
+          <p class="example">
+            90&nbsp;kg man, bench 100&nbsp;kg &times; 5 &rarr; 1RM 114.6&nbsp;kg &rarr; 74.1 DOTS
+            &rarr; index 459 &rarr; Gold&nbsp;V, 7&nbsp;kg short of Gold&nbsp;IV.
+          </p>
+        </section>
+      </div>
+
+      <section>
+        <h2>Tools and platform</h2>
+        <div class="columns">
+          <ul class="spec">
+            <li><b>Assistant</b> Claude Code (Anthropic)</li>
+            <li><b>Runtime</b> Node.js 24</li>
+            <li><b>API</b> Express 5, JSON only</li>
+            <li><b>Database</b> <code>node:sqlite</code>, built in &mdash; nothing to compile</li>
+            <li><b>Frontend</b> React 18, Vite, react-router, recharts</li>
+            <li><b>Styling</b> Font Awesome inline SVG; plain CSS, no framework</li>
+            <li><b>Tests</b> <code>node --test</code>, built in</li>
+          </ul>
+          <ul class="spec">
+            <li><b>Runs on</b> a laptop &mdash; macOS, Windows or Linux</li>
+            <li><b>Install</b> <code>npm run setup</code></li>
+            <li><b>Start</b> <code>npm run build &amp;&amp; npm start</code> &rarr; <code>localhost:3000</code></li>
+            <li><b>Network</b> none: no cloud, no CDN, no container</li>
+            <li><b>Offline</b> verified &mdash; every asset is same-origin</li>
+            <li><b>Data</b> one SQLite file beside the code</li>
+            <li><b>Lifespan</b> Phase 1 only &mdash; the code is discarded after</li>
+          </ul>
+        </div>
+      </section>
+
+      <footer>
+        <p class="disclosure">
+          <b>Use of generative AI.</b> Built with Claude Code (Anthropic), disclosed as the course
+          requires. The specification, the scoring design and the review at each phase are ours; the
+          assistant wrote code against that specification one phase at a time, each verified with
+          real requests before the next began. Two expected values in our own specification turned
+          out to be wrong, and were corrected once the engine disagreed with them.
+        </p>
+        <p>
+          Estimates are for information only, based on<br />population-level statistical formulas.
+          Not medical advice.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
