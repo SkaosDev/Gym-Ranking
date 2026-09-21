@@ -9,10 +9,12 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { jsonOnly } from './middleware/jsonOnly.js';
 import authRoutes from './routes/auth.js';
 import exerciseRoutes from './routes/exercises.js';
+import friendRoutes from './routes/friends.js';
 import meRoutes from './routes/me.js';
 import performanceRoutes from './routes/performances.js';
 import rankRoutes from './routes/ranks.js';
 import statsRoutes from './routes/stats.js';
+import userRoutes from './routes/users.js';
 
 const CLIENT_DIST = path.join(import.meta.dirname, '..', 'client', 'dist');
 
@@ -71,6 +73,8 @@ export function createApp({ sessionStore } = {}) {
   app.use('/api/ranks', rankRoutes);
   app.use('/api/stats', statsRoutes);
   app.use('/api/me', meRoutes);
+  app.use('/api/friends', friendRoutes);
+  app.use('/api/users', userRoutes);
 
   // Anything under /api that no route above claimed is a 404, not the SPA.
   app.use('/api', (req, res, next) => {
