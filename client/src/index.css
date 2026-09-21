@@ -778,3 +778,39 @@ tbody tr:last-child td {
 .recharts-surface {
   overflow: visible;
 }
+
+/* Friends. */
+.person-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.person-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.person-row:last-child {
+  border-bottom: 0;
+}
+
+.person-row__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.person-row__who svg {
+  color: var(--text-faint);
+}
+
+.person-row__meta {
+  font-size: var(--text-xs);
+}

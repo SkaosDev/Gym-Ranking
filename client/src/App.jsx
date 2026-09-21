@@ -11,6 +11,7 @@ import Login from './pages/Login.jsx';
 import NotFound from './pages/NotFound.jsx';
 import Performances from './pages/Performances.jsx';
 import Profile from './pages/Profile.jsx';
+import PublicProfile from './pages/PublicProfile.jsx';
 import RankExplained from './pages/RankExplained.jsx';
 import Progress from './pages/Progress.jsx';
 import Signup from './pages/Signup.jsx';
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/performances" element={<Performances />} />
                 <Route path="/progress" element={<Progress />} />
                 <Route path="/friends" element={<Friends />} />
+                <Route path="/u/:username" element={<PublicProfile />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/rank-explained" element={<RankExplained />} />
                 <Route path="/rank-explained/:perfId" element={<RankExplained />} />

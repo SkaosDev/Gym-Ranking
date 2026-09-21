@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
+import { onFriendsChanged } from '../lib/friendEvents.js';
 import Icon from './Icon.jsx';
 import './Navbar.css';
 
@@ -24,19 +25,23 @@ export default function Navbar() {
   // Close the burger menu whenever navigation happens.
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
-  useEffect(() => {
+  const refreshPendingCount = useCallback(() => {
     let cancelled = false;
     api
       .get('/friends')
       .then((data) => {
         if (!cancelled) setPendingRequests(data.incoming?.length ?? 0);
       })
-      // The friends endpoint lands in a later phase; until then, no pill.
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [location.pathname]);
+  }, []);
+
+  // On navigation, and again whenever the friends page changes something,
+  // so the pill never sits on a number that is no longer true.
+  useEffect(() => refreshPendingCount(), [location.pathname, refreshPendingCount]);
+  useEffect(() => onFriendsChanged(refreshPendingCount), [refreshPendingCount]);
 
   async function handleLogout() {
     await logout();
