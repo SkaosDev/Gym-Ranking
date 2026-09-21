@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "node --env-file-if-exists=../.env --watch server.js",
     "start": "node --env-file-if-exists=../.env server.js",
-    "test": "node --env-file-if-exists=../.env --test test/",
+    "test": "node --env-file-if-exists=../.env --test 'test/*.test.js'",
+    "migrate": "node --env-file-if-exists=../.env scripts/migrate.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
