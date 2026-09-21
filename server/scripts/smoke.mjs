@@ -468,6 +468,62 @@ async function phase7() {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 8 - the four chart series
+// ---------------------------------------------------------------------------
+async function phase8() {
+  const e1rm = await req('GET', '/api/stats/e1rm');
+  expect(
+    'GET /api/stats/e1rm returns a series per exercise with data',
+    e1rm.status === 200 && e1rm.json.series.length > 0 && e1rm.json.series[0].points.length > 0,
+    `got ${e1rm.status} with ${e1rm.json?.series?.length} series`,
+  );
+  expect(
+    'its points are in date order',
+    e1rm.json.series.every((s) =>
+      s.points.every((p, i) => i === 0 || p.performed_at >= s.points[i - 1].performed_at),
+    ),
+    'a series was out of order',
+  );
+
+  const index = await req('GET', '/api/stats/index');
+  expect(
+    'GET /api/stats/index carries the seven rank thresholds',
+    index.status === 200 &&
+      index.json.thresholds.length === 7 &&
+      index.json.thresholds.every((t) => /^#[0-9a-f]{6}$/i.test(t.color)),
+    JSON.stringify(index.json?.thresholds?.map((t) => t.index)),
+  );
+
+  const radar = await req('GET', '/api/stats/radar');
+  const ranks = await req('GET', '/api/ranks');
+  expect('GET /api/stats/radar covers all seven exercises', radar.json?.items?.length === 7, `got ${radar.json?.items?.length}`);
+  expect(
+    'the radar agrees with the dashboard',
+    radar.json.overall_index === ranks.json.overall.index &&
+      radar.json.items.every((item) => {
+        const entry = ranks.json.exercises.find((e) => e.exercise.code === item.code);
+        return item.index === (entry.effective_index ?? 0);
+      }),
+    'radar and ranks disagree',
+  );
+
+  const bodyweight = await req('GET', '/api/stats/bodyweight');
+  const last = bodyweight.json?.points?.at(-1);
+  expect('GET /api/stats/bodyweight returns a timeline', bodyweight.status === 200 && bodyweight.json.points.length > 0, `got ${bodyweight.status}`);
+  expect(
+    'and its last point matches the live overall rank',
+    last?.overall_index === ranks.json.overall.index,
+    `${last?.overall_index} vs ${ranks.json.overall.index}`,
+  );
+
+  const filtered = await req('GET', '/api/stats/e1rm?exercise=squat');
+  expect('the exercise filter works', filtered.status === 200 && filtered.json.series.length === 1, `got ${filtered.json?.series?.length} series`);
+
+  const bad = await req('GET', '/api/stats/index?exercise=nonsense');
+  expect('an unknown exercise filter is refused', bad.status === 422, `got ${bad.status}`);
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log(`\nGymRank smoke checks against ${BASE}\n`);
   await waitForServer();
@@ -475,6 +531,7 @@ async function main() {
   await phase4();
   await phase5();
   await phase7();
+  await phase8();
 
   const nameWidth = Math.max(...results.map((r) => r.name.length), 6);
   console.log(`${'CHECK'.padEnd(nameWidth)}  RESULT  DETAIL`);
