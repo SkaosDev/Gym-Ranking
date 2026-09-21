@@ -9,7 +9,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { jsonOnly } from './middleware/jsonOnly.js';
 import authRoutes from './routes/auth.js';
 import exerciseRoutes from './routes/exercises.js';
+import meRoutes from './routes/me.js';
 import performanceRoutes from './routes/performances.js';
+import rankRoutes from './routes/ranks.js';
 
 const CLIENT_DIST = path.join(import.meta.dirname, '..', 'client', 'dist');
 
@@ -65,6 +67,8 @@ export function createApp({ sessionStore } = {}) {
   app.use('/api/auth', authRoutes);
   app.use('/api/exercises', exerciseRoutes);
   app.use('/api/performances', performanceRoutes);
+  app.use('/api/ranks', rankRoutes);
+  app.use('/api/me', meRoutes);
 
   // Anything under /api that no route above claimed is a 404, not the SPA.
   app.use('/api', (req, res, next) => {

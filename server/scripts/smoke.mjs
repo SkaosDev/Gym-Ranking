@@ -365,12 +365,116 @@ async function phase5() {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 7 - ranks, the explanation, and the profile endpoints
+// ---------------------------------------------------------------------------
+async function phase7() {
+  const exercises = await req('GET', '/api/exercises');
+  const byCode = Object.fromEntries((exercises.json?.items ?? []).map((e) => [e.code, e]));
+  const logSet = (code, weight_kg, reps, performed_at) =>
+    req('POST', '/api/performances', {
+      body: { exercise_id: byCode[code].id, weight_kg, reps, performed_at },
+    });
+
+  const partial = await req('GET', '/api/ranks');
+  expect('GET /api/ranks returns every exercise', partial.json?.exercises?.length === 7, `got ${partial.json?.exercises?.length}`);
+  expect(
+    'the overall rank stays hidden below three weighted exercises',
+    partial.json?.overall?.complete === false && partial.json?.overall?.index === null,
+    JSON.stringify(partial.json?.overall).slice(0, 140),
+  );
+  expect(
+    'and it names what is still missing',
+    Array.isArray(partial.json?.overall?.missing) && partial.json.overall.missing.length > 0,
+    JSON.stringify(partial.json?.overall?.missing),
+  );
+
+  // Phase 5 left bench and deadlift on this account; add squat and ohp.
+  await logSet('squat', 150, 5, '2026-06-01');
+  await logSet('ohp', 60, 5, '2026-06-02');
+
+  const full = await req('GET', '/api/ranks');
+  expect(
+    'the overall rank appears once three weighted exercises have data',
+    full.json?.overall?.complete === true && typeof full.json?.overall?.index === 'number',
+    JSON.stringify(full.json?.overall).slice(0, 140),
+  );
+
+  const contributions = full.json.overall.contributions;
+  const totalWeight = contributions.reduce((sum, c) => sum + c.global_weight, 0);
+  const expectedIndex =
+    contributions.reduce((sum, c) => sum + c.effective_index * c.global_weight, 0) / totalWeight;
+  expect(
+    'the overall index is the weighted mean of its contributions',
+    Math.abs(full.json.overall.index - expectedIndex) < 0.05,
+    `${full.json.overall.index} vs ${expectedIndex}`,
+  );
+
+  const squat = full.json.exercises.find((e) => e.exercise.code === 'squat');
+  expect(
+    'each exercise card names the kilograms to its next division',
+    squat.has_data && squat.next_division.kg_needed > 0 && squat.next_division.label.length > 0,
+    JSON.stringify(squat.next_division),
+  );
+
+  const explain = await req('GET', '/api/ranks/explain/latest');
+  expect('GET /api/ranks/explain/latest works', explain.status === 200, `got ${explain.status}`);
+  expect(
+    'the explanation shows all six steps with their working',
+    explain.json?.steps?.length === 6 &&
+      explain.json.steps[2].polynomial_value > 0 &&
+      Array.isArray(explain.json.steps[4].anchors) &&
+      explain.json.steps[4].anchors.length === 6,
+    `${explain.json?.steps?.length} steps`,
+  );
+
+  const profile = await req('GET', '/api/me/profile');
+  expect('GET /api/me/profile works', profile.status === 200 && profile.json?.username, `got ${profile.status}`);
+
+  const patched = await req('PATCH', '/api/me/profile', { body: { height_cm: 181 } });
+  expect('PATCH /api/me/profile updates a field', patched.status === 200 && patched.json.height_cm === 181, `got ${patched.status}`);
+
+  // A lighter lifter moving the same bar scores higher, which is the point.
+  const beforeCut = (await req('GET', '/api/ranks')).json.exercises.find((e) => e.exercise.code === 'squat').effective_index;
+  const weighIn = await req('POST', '/api/me/weights', { body: { weight_kg: 82 } });
+  expect('POST /api/me/weights records a weigh-in', weighIn.status === 201, `got ${weighIn.status}`);
+  const afterCut = (await req('GET', '/api/ranks')).json.exercises.find((e) => e.exercise.code === 'squat').effective_index;
+  expect(
+    'cutting weight raises an external lift rank, as documented',
+    afterCut > beforeCut,
+    `${beforeCut} -> ${afterCut}`,
+  );
+
+  // The weigh-in above carried no date, so it corrected today's reading rather
+  // than adding a second one: one reading per day, by design.
+  const sameDay = await req('GET', '/api/me/weights');
+  const todayIso = new Date().toISOString().slice(0, 10);
+  expect(
+    'a second weigh-in the same day corrects it rather than duplicating',
+    sameDay.status === 200 &&
+      sameDay.json.items.filter((w) => w.measured_at === todayIso).length === 1 &&
+      sameDay.json.items.find((w) => w.measured_at === todayIso)?.weight_kg === 82,
+    JSON.stringify(sameDay.json?.items),
+  );
+
+  await req('POST', '/api/me/weights', { body: { weight_kg: 88, measured_at: '2026-05-01' } });
+  const weights = await req('GET', '/api/me/weights');
+  expect(
+    'GET /api/me/weights lists the history newest first',
+    weights.status === 200 &&
+      weights.json.items.length >= 2 &&
+      weights.json.items[0].measured_at >= weights.json.items.at(-1).measured_at,
+    `got ${weights.json?.items?.length} entries`,
+  );
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log(`\nGymRank smoke checks against ${BASE}\n`);
   await waitForServer();
   await phase1();
   await phase4();
   await phase5();
+  await phase7();
 
   const nameWidth = Math.max(...results.map((r) => r.name.length), 6);
   console.log(`${'CHECK'.padEnd(nameWidth)}  RESULT  DETAIL`);
