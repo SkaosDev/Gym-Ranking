@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+import Card from '../components/Card.jsx';
+import Icon from '../components/Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Login() {
@@ -29,44 +31,53 @@ export default function Login() {
   }
 
   return (
-    <section>
-      <h1>Log in</h1>
+    <>
+      <p className="auth-brand">
+        <Icon name="brand" /> GymRank
+      </p>
 
-      {error && <p role="alert">{error}</p>}
+      <Card title="Log in">
+        {error && (
+          <div className="notice notice--error" role="alert">
+            <Icon name="warning" />
+            <span>{error}</span>
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit}>
-        <p>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={form.email}
-            onChange={update('email')}
-          />
-        </p>
-        <p>
-          <label htmlFor="password">Password</label>
-          <br />
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={form.password}
-            onChange={update('password')}
-          />
-        </p>
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Logging in...' : 'Log in'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={form.email}
+              onChange={update('email')}
+            />
+          </div>
 
-      <p>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={form.password}
+              onChange={update('password')}
+            />
+          </div>
+
+          <button type="submit" className="button--primary" disabled={submitting}>
+            {submitting ? 'Logging in...' : 'Log in'}
+          </button>
+        </form>
+      </Card>
+
+      <p className="auth-alt muted">
         No account yet? <Link to="/signup">Create one</Link>.
       </p>
-    </section>
+    </>
   );
 }

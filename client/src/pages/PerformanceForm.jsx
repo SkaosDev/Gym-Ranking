@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import Icon from '../components/Icon.jsx';
 import { api } from '../lib/api.js';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -31,7 +32,7 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
   const [saving, setSaving] = useState(false);
 
   const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
-  const selected = exercises.find((e) => String(e.id) === form.exercise_id);
+  const selected = exercises.find((exercise) => String(exercise.id) === form.exercise_id);
   const isBodyweight = selected?.type === 'bodyweight';
 
   async function handleSubmit(event) {
@@ -61,83 +62,93 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
     }
   }
 
-  const fieldError = (name) => fieldErrors[name] && <span role="alert"> {fieldErrors[name]}</span>;
+  const errorFor = (name) =>
+    fieldErrors[name] ? (
+      <span className="field-error" role="alert">
+        {fieldErrors[name]}
+      </span>
+    ) : null;
+
+  const invalid = (name) => (fieldErrors[name] ? 'true' : undefined);
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2>{performance ? 'Edit performance' : 'Log a performance'}</h2>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <div className="notice notice--error" role="alert">
+          <Icon name="warning" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <p>
-        <label htmlFor="exercise_id">Exercise</label>
-        {fieldError('exercise_id')}
-        <br />
-        <select id="exercise_id" value={form.exercise_id} onChange={update('exercise_id')}>
-          {exercises.map((exercise) => (
-            <option key={exercise.id} value={exercise.id}>
-              {exercise.label}
-            </option>
-          ))}
-        </select>
-      </p>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="exercise_id">Exercise</label>
+          <select id="exercise_id" value={form.exercise_id} onChange={update('exercise_id')}>
+            {exercises.map((exercise) => (
+              <option key={exercise.id} value={exercise.id}>
+                {exercise.label}
+              </option>
+            ))}
+          </select>
+          {errorFor('exercise_id')}
+        </div>
 
-      <p>
-        <label htmlFor="weight_kg">{isBodyweight ? 'Added load (kg)' : 'Load (kg)'}</label>
-        {fieldError('weight_kg')}
-        <br />
-        <input
-          id="weight_kg"
-          type="number"
-          required
-          step="0.5"
-          min={isBodyweight ? -200 : 0}
-          max={500}
-          value={form.weight_kg}
-          onChange={update('weight_kg')}
-        />
-        <br />
-        <small>
-          {isBodyweight
-            ? 'Your bodyweight is counted automatically. Use 0 for a strict rep, or a negative number for band assistance.'
-            : 'The load on the bar.'}
-        </small>
-      </p>
+        <div className="field">
+          <label htmlFor="performed_at">Date</label>
+          <input
+            id="performed_at"
+            type="date"
+            required
+            max={TODAY}
+            aria-invalid={invalid('performed_at')}
+            value={form.performed_at}
+            onChange={update('performed_at')}
+          />
+          {errorFor('performed_at')}
+        </div>
+      </div>
 
-      <p>
-        <label htmlFor="reps">Reps</label>
-        {fieldError('reps')}
-        <br />
-        <input
-          id="reps"
-          type="number"
-          required
-          min={1}
-          max={100}
-          value={form.reps}
-          onChange={update('reps')}
-        />
-        <br />
-        <small>Above 12 reps the set is kept but does not count toward your rank.</small>
-      </p>
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="weight_kg">{isBodyweight ? 'Added load (kg)' : 'Load (kg)'}</label>
+          <input
+            id="weight_kg"
+            type="number"
+            required
+            step="0.5"
+            min={isBodyweight ? -200 : 0}
+            max={500}
+            aria-invalid={invalid('weight_kg')}
+            value={form.weight_kg}
+            onChange={update('weight_kg')}
+          />
+          <span className="field-hint">
+            {isBodyweight
+              ? 'Your bodyweight counts automatically. Use 0 for a strict rep, or a negative number for band assistance.'
+              : 'The load on the bar.'}
+          </span>
+          {errorFor('weight_kg')}
+        </div>
 
-      <p>
-        <label htmlFor="performed_at">Date</label>
-        {fieldError('performed_at')}
-        <br />
-        <input
-          id="performed_at"
-          type="date"
-          required
-          max={TODAY}
-          value={form.performed_at}
-          onChange={update('performed_at')}
-        />
-      </p>
+        <div className="field">
+          <label htmlFor="reps">Reps</label>
+          <input
+            id="reps"
+            type="number"
+            required
+            min={1}
+            max={100}
+            aria-invalid={invalid('reps')}
+            value={form.reps}
+            onChange={update('reps')}
+          />
+          <span className="field-hint">Above 12 reps the set is kept but does not count.</span>
+          {errorFor('reps')}
+        </div>
+      </div>
 
-      <p>
+      <div className="field">
         <label htmlFor="notes">Notes</label>
-        {fieldError('notes')}
-        <br />
         <input
           id="notes"
           type="text"
@@ -146,14 +157,18 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
           onChange={update('notes')}
           placeholder="Optional"
         />
-      </p>
+        {errorFor('notes')}
+      </div>
 
-      <button type="submit" disabled={saving}>
-        {saving ? 'Saving...' : 'Save'}
-      </button>{' '}
-      <button type="button" onClick={onCancel} disabled={saving}>
-        Cancel
-      </button>
+      <div className="row">
+        <button type="submit" className="button--primary" disabled={saving}>
+          <Icon name="confirm" />
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+        <button type="button" onClick={onCancel} disabled={saving}>
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
