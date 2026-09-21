@@ -766,3 +766,15 @@ tbody tr:last-child td {
 .form-actions {
   margin-top: var(--space-3);
 }
+
+/* Charts. */
+.chart-subtitle {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.recharts-surface {
+  overflow: visible;
+}
