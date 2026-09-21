@@ -1,0 +1,20 @@
+{
+  "name": "gymrank-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=../.env --watch server.js",
+    "start": "node --env-file-if-exists=../.env server.js",
+    "test": "node --env-file-if-exists=../.env --test test/",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-session": "^1.19.0"
+  }
+}
