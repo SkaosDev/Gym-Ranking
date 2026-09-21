@@ -53,6 +53,10 @@ export const jar = {
   get value() {
     return cookie;
   },
+  /** Swap identity mid-run, so one script can act as two people. */
+  set: (value) => {
+    cookie = value;
+  },
 };
 
 async function req(
@@ -524,6 +528,141 @@ async function phase8() {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 9 - friendships, and the data scoping that matters most
+// ---------------------------------------------------------------------------
+async function phase9() {
+  const tag = Date.now().toString(36);
+  const alice = jar.value; // the account phases 4-8 built
+
+  const aliceMe = await req('GET', '/api/auth/me');
+  const aliceName = aliceMe.json.username;
+
+  // A second account, with private data worth not leaking.
+  jar.clear();
+  const bobDetails = {
+    email: `smoke-private-${tag}@example.com`,
+    username: `smokebob${tag}`.slice(0, 20),
+    password: 'smoke-test-password',
+    sex: 'M',
+    birth_date: '1991-07-23',
+    height_cm: 193,
+    weight_kg: 87.3,
+  };
+  const bobSignup = await req('POST', '/api/auth/signup', { body: bobDetails });
+  expect('a second account can be created', bobSignup.status === 201, bobSignup.text.slice(0, 120));
+  const bob = jar.value;
+
+  const exercises = await req('GET', '/api/exercises');
+  const squatId = exercises.json.items.find((e) => e.code === 'squat').id;
+  await req('POST', '/api/performances', {
+    body: { exercise_id: squatId, weight_kg: 177.5, reps: 3, performed_at: '2026-06-01', notes: 'smoke-secret-note' },
+  });
+
+  // --- the stranger view -------------------------------------------------
+  jar.set(alice);
+  const stranger = await req('GET', `/api/users/${bobDetails.username}`);
+  expect(
+    'a stranger sees the username and nothing else',
+    stranger.status === 200 &&
+      stranger.json.visibility === 'stranger' &&
+      stranger.json.created_at === null &&
+      stranger.json.overall === null &&
+      stranger.json.exercises === null,
+    JSON.stringify(stranger.json).slice(0, 160),
+  );
+
+  // --- crossed requests --------------------------------------------------
+  const sent = await req('POST', '/api/friends/requests', { body: { username: bobDetails.username } });
+  expect('a friend request can be sent', sent.status === 201, sent.text.slice(0, 120));
+
+  const selfRequest = await req('POST', '/api/friends/requests', { body: { username: aliceName } });
+  expect('adding yourself is refused', selfRequest.status === 422, `got ${selfRequest.status}`);
+
+  const duplicate = await req('POST', '/api/friends/requests', { body: { username: bobDetails.username } });
+  expect('a duplicate request is refused', duplicate.status === 409, `got ${duplicate.status}`);
+
+  jar.set(bob);
+  const crossed = await req('POST', '/api/friends/requests', { body: { username: aliceName } });
+  expect(
+    'a crossed request accepts the existing row instead of duplicating',
+    crossed.status === 200 && crossed.json.outcome === 'accepted_existing',
+    `${crossed.status} ${JSON.stringify(crossed.json)}`,
+  );
+
+  const bobFriends = await req('GET', '/api/friends');
+  expect(
+    'both sides now see one friend and no pending requests',
+    bobFriends.json.friends.length >= 1 &&
+      bobFriends.json.incoming.length === 0 &&
+      bobFriends.json.outgoing.length === 0,
+    JSON.stringify({ f: bobFriends.json.friends.length, i: bobFriends.json.incoming.length, o: bobFriends.json.outgoing.length }),
+  );
+
+  // --- search ------------------------------------------------------------
+  const tooShort = await req('GET', '/api/friends/search?q=ab');
+  expect('search needs three characters', tooShort.status === 422, `got ${tooShort.status}`);
+
+  const byEmail = await req('GET', `/api/friends/search?q=${encodeURIComponent('smoke-private')}`);
+  expect(
+    'search never matches an email address',
+    byEmail.status === 200 && byEmail.json.items.length === 0,
+    JSON.stringify(byEmail.json).slice(0, 120),
+  );
+
+  // --- the friend view, and the leak check -------------------------------
+  jar.set(alice);
+  const friendView = await req('GET', `/api/users/${bobDetails.username}`);
+  expect(
+    'a friend sees ranks and the index series',
+    friendView.json.visibility === 'full' && Array.isArray(friendView.json.exercises),
+    JSON.stringify(friendView.json).slice(0, 160),
+  );
+
+  const friendsList = await req('GET', '/api/friends');
+  const forbiddenKeys = [
+    'email', 'birth_date', 'height_cm', 'weight_kg', 'bodyweight_kg', 'current_weight_kg',
+    'notes', 'e1rm_kg', 'dots_points', 'adjusted_score', 'effective_load_kg',
+    'target_e1rm_kg', 'kg_needed', 'password_hash', 'password_salt',
+  ];
+  const forbiddenValues = ['smoke-private', '1991-07-23', 'smoke-secret-note', '193', '87.3', '177.5'];
+
+  const collectKeys = (value, found = new Set()) => {
+    if (Array.isArray(value)) value.forEach((item) => collectKeys(item, found));
+    else if (value && typeof value === 'object') {
+      for (const [key, nested] of Object.entries(value)) {
+        found.add(key);
+        collectKeys(nested, found);
+      }
+    }
+    return found;
+  };
+
+  const leaks = [];
+  for (const view of [stranger, friendView, friendsList]) {
+    const keys = collectKeys(view.json);
+    for (const key of forbiddenKeys) if (keys.has(key)) leaks.push(`key ${key}`);
+    for (const value of forbiddenValues) if (view.text.includes(value)) leaks.push(`value ${value}`);
+  }
+  expect(
+    'no body data, load or note appears in any friend-facing payload',
+    leaks.length === 0,
+    leaks.join(', '),
+  );
+
+  // --- removing -----------------------------------------------------------
+  const friendship = friendsList.json.friends.find((f) => f.username === bobDetails.username);
+  const removed = await req('DELETE', `/api/friends/${friendship.id}`);
+  expect('a friend can be removed', removed.status === 200, `got ${removed.status}`);
+
+  const afterRemoval = await req('GET', `/api/users/${bobDetails.username}`);
+  expect(
+    'and the ranks go back behind the wall',
+    afterRemoval.json.visibility === 'stranger' && afterRemoval.json.overall === null,
+    JSON.stringify(afterRemoval.json).slice(0, 140),
+  );
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log(`\nGymRank smoke checks against ${BASE}\n`);
   await waitForServer();
@@ -532,6 +671,7 @@ async function main() {
   await phase5();
   await phase7();
   await phase8();
+  await phase9();
 
   const nameWidth = Math.max(...results.map((r) => r.name.length), 6);
   console.log(`${'CHECK'.padEnd(nameWidth)}  RESULT  DETAIL`);
