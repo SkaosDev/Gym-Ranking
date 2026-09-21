@@ -44,14 +44,35 @@ async function waitForServer(timeoutMs = 20_000) {
   throw new Error(`server at ${BASE} never became ready (${lastError})`);
 }
 
-async function req(method, path, { body, contentType = 'application/json', raw = false } = {}) {
-  const headers = {};
+/** One cookie jar for the whole run, so the script behaves like one browser. */
+let cookie = null;
+export const jar = {
+  clear: () => {
+    cookie = null;
+  },
+  get value() {
+    return cookie;
+  },
+};
+
+async function req(
+  method,
+  path,
+  { body, contentType = 'application/json', raw = false, sendCookie = true, headers: extra = {} } = {},
+) {
+  const headers = { ...extra };
   let payload;
   if (body !== undefined) {
     if (contentType) headers['Content-Type'] = contentType;
     payload = raw ? body : JSON.stringify(body);
+  } else if (contentType && method !== 'GET') {
+    // Mutating requests must declare JSON even when they carry no body.
+    headers['Content-Type'] = contentType;
   }
+  if (sendCookie && cookie) headers.Cookie = cookie;
+
   const res = await fetch(`${BASE}${path}`, { method, headers, body: payload });
+  for (const raw of res.headers.getSetCookie()) cookie = raw.split(';')[0];
   const text = await res.text();
   let json = null;
   try {
@@ -141,10 +162,115 @@ async function phase1() {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 4 - accounts, sessions and the JSON-only policy
+// ---------------------------------------------------------------------------
+async function phase4() {
+  // A fresh identity per run keeps repeated smoke runs independent.
+  const tag = Date.now().toString(36);
+  const account = {
+    email: `smoke-${tag}@example.com`,
+    username: `smoke${tag}`.slice(0, 20),
+    password: 'smoke-test-password',
+    sex: 'M',
+    birth_date: '1996-04-12',
+    height_cm: 182,
+    weight_kg: 88.5,
+  };
+
+  jar.clear();
+  const anonymous = await req('GET', '/api/auth/me');
+  expect(
+    'GET /api/auth/me is 401 when signed out',
+    anonymous.status === 401 && anonymous.json?.error?.code === 'UNAUTHENTICATED',
+    `got ${anonymous.status}`,
+  );
+
+  const formPost = await req('POST', '/api/auth/login', {
+    body: 'email=a@b.co&password=x',
+    contentType: 'application/x-www-form-urlencoded',
+    raw: true,
+  });
+  expect(
+    'form-encoded POST is refused (CSRF vector)',
+    formPost.status === 415 && formPost.json?.error?.code === 'UNSUPPORTED_MEDIA_TYPE',
+    `got ${formPost.status}`,
+  );
+
+  const signup = await req('POST', '/api/auth/signup', { body: account });
+  expect('POST /api/auth/signup creates an account', signup.status === 201, signup.text.slice(0, 160));
+  expect(
+    'signup returns the owner profile with a computed age',
+    signup.json?.username === account.username && typeof signup.json?.age === 'number',
+    JSON.stringify(signup.json)?.slice(0, 160),
+  );
+  expect(
+    'signup seeds the bodyweight history',
+    signup.json?.current_weight_kg === account.weight_kg,
+    `got ${signup.json?.current_weight_kg}`,
+  );
+
+  const cookieHeader = jar.value ?? '';
+  expect('a session cookie was issued', cookieHeader.startsWith('gymrank.sid='), cookieHeader);
+
+  const me = await req('GET', '/api/auth/me');
+  expect('GET /api/auth/me returns the profile once signed in', me.status === 200, `got ${me.status}`);
+
+  const leaked = ['password_hash', 'password_salt', account.password].filter((needle) =>
+    `${signup.text}${me.text}`.includes(needle),
+  );
+  expect('no password material appears in any response', leaked.length === 0, leaked.join(', '));
+
+  const duplicate = await req('POST', '/api/auth/signup', {
+    body: { ...account, email: account.email.toUpperCase(), username: account.username.toUpperCase() },
+  });
+  expect(
+    'duplicate email and username are refused, case-insensitively',
+    duplicate.status === 409 && duplicate.json?.error?.fields?.email && duplicate.json?.error?.fields?.username,
+    `got ${duplicate.status}`,
+  );
+
+  const invalid = await req('POST', '/api/auth/signup', {
+    body: { email: 'nope', username: 'A B', password: 'short', sex: 'X', birth_date: '2026-02-30', height_cm: 5, weight_kg: 900 },
+  });
+  expect(
+    'invalid signup reports every field at once',
+    invalid.status === 422 && Object.keys(invalid.json?.error?.fields ?? {}).length === 7,
+    `got ${invalid.status} with ${Object.keys(invalid.json?.error?.fields ?? {}).length} fields`,
+  );
+
+  const logout = await req('POST', '/api/auth/logout');
+  expect('POST /api/auth/logout succeeds', logout.status === 200, `got ${logout.status}`);
+  const afterLogout = await req('GET', '/api/auth/me');
+  expect('the session is dead after logout', afterLogout.status === 401, `got ${afterLogout.status}`);
+
+  const wrongPassword = await req('POST', '/api/auth/login', {
+    body: { email: account.email, password: 'not-the-password' },
+  });
+  const unknownEmail = await req('POST', '/api/auth/login', {
+    body: { email: `nobody-${tag}@example.com`, password: 'not-the-password' },
+  });
+  expect(
+    'a wrong password and an unknown email are indistinguishable',
+    wrongPassword.status === 401 &&
+      unknownEmail.status === 401 &&
+      wrongPassword.json?.error?.message === unknownEmail.json?.error?.message,
+    `${wrongPassword.status}/${unknownEmail.status}`,
+  );
+
+  const login = await req('POST', '/api/auth/login', {
+    body: { email: account.email, password: account.password },
+  });
+  expect('POST /api/auth/login signs back in', login.status === 200, login.text.slice(0, 160));
+  const meAgain = await req('GET', '/api/auth/me');
+  expect('the new session works', meAgain.status === 200 && meAgain.json?.username === account.username, `got ${meAgain.status}`);
+}
+
+// ---------------------------------------------------------------------------
 async function main() {
   console.log(`\nGymRank smoke checks against ${BASE}\n`);
   await waitForServer();
   await phase1();
+  await phase4();
 
   const nameWidth = Math.max(...results.map((r) => r.name.length), 6);
   console.log(`${'CHECK'.padEnd(nameWidth)}  RESULT  DETAIL`);

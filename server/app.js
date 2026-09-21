@@ -1,23 +1,57 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import express from 'express';
+import session from 'express-session';
 
 import { ApiError } from './lib/errors.js';
+import { SESSION_COOKIE_NAME, SESSION_TTL_MS, SqliteSessionStore } from './lib/session.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { jsonOnly } from './middleware/jsonOnly.js';
+import authRoutes from './routes/auth.js';
 
 const CLIENT_DIST = path.join(import.meta.dirname, '..', 'client', 'dist');
+
+const DEVELOPMENT_SECRET = 'gymrank-insecure-development-secret';
 
 /**
  * Builds the Express application. The API is JSON only and never renders HTML;
  * the built client is served as static files with an SPA fallback so the whole
  * app can run from a single origin at demo time.
  */
-export function createApp() {
+export function createApp({ sessionStore } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  // Only loopback is trusted, which is all the Vite dev proxy needs.
+  app.set('trust proxy', 'loopback');
+
   app.use(express.json({ limit: '64kb' }));
 
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    console.warn('[startup] SESSION_SECRET is not set; falling back to a development value.');
+  }
+
+  app.use(
+    session({
+      name: SESSION_COOKIE_NAME,
+      store: sessionStore ?? new SqliteSessionStore(),
+      secret: secret ?? DEVELOPMENT_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: false, // localhost is plain http; a real deployment would set this
+        maxAge: SESSION_TTL_MS,
+        path: '/',
+      },
+    }),
+  );
+
   // ---------------------------------------------------------------- API routes
+  app.use('/api', jsonOnly);
+
   app.get('/api/healthz', (req, res) => {
     res.json({
       status: 'ok',
@@ -25,6 +59,8 @@ export function createApp() {
       uptimeSeconds: Math.round(process.uptime()),
     });
   });
+
+  app.use('/api/auth', authRoutes);
 
   // Anything under /api that no route above claimed is a 404, not the SPA.
   app.use('/api', (req, res, next) => {

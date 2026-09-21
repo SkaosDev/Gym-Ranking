@@ -61,8 +61,13 @@ describe('migrations', () => {
 
   it('is idempotent', () => {
     const second = runMigrations();
-    assert.deepEqual(second.applied, []);
-    assert.equal(second.skipped.length, 2);
+    assert.deepEqual(second.applied, [], 'a second run must apply nothing');
+    assert.ok(second.skipped.length > 0, 'and must recognise the ones already applied');
+    assert.equal(
+      get('SELECT count(1) AS n FROM migrations').n,
+      second.skipped.length,
+      'the ledger and the skipped list must agree',
+    );
   });
 });
 
