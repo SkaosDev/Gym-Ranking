@@ -98,7 +98,7 @@ export default function Profile() {
       <div className="page-header">
         <div>
           <h1>Profile</h1>
-          <p>The numbers your ranks are calibrated against.</p>
+          <p>Your ranks are measured against the standards for your bodyweight.</p>
         </div>
       </div>
 
@@ -174,7 +174,7 @@ export default function Profile() {
                 <option value="F">Female</option>
               </select>
               <span className="field-hint">
-                Selects which DOTS coefficients and strength standards apply.
+                Selects which strength standards apply.
               </span>
               {errorFor('sex')}
             </div>

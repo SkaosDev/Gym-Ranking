@@ -288,14 +288,14 @@ async function phase5() {
   });
   expect('POST /api/performances creates a set', created.status === 201, created.text.slice(0, 160));
   // Reference case 1, all the way through the HTTP API: a 90 kg man benching
-  // 100 kg for 5 gives e1RM 114.58, DOTS 74.09, index 459.3, Gold V.
+  // 100 kg for 5 gives e1RM 114.58, between Intermediate (109) and Advanced
+  // (137) at 90 kg: index 489.9, Gold V.
   expect(
     'reference case 1 reproduces end to end',
     Math.abs((created.json?.e1rm_kg ?? 0) - 114.58) < 0.01 &&
-      Math.abs((created.json?.dots_points ?? 0) - 74.09) < 0.01 &&
-      Math.abs((created.json?.strength_index ?? 0) - 459.3) < 0.1 &&
+      Math.abs((created.json?.strength_index ?? 0) - 489.9) < 0.1 &&
       created.json?.rank?.label === 'Gold V',
-    `e1RM ${created.json?.e1rm_kg}, DOTS ${created.json?.dots_points}, ` +
+    `e1RM ${created.json?.e1rm_kg}, ` +
       `index ${created.json?.strength_index}, rank ${created.json?.rank?.label}`,
   );
   expect(
@@ -425,9 +425,9 @@ async function phase7() {
   expect(
     'the explanation shows all six steps with their working',
     explain.json?.steps?.length === 6 &&
-      explain.json.steps[2].polynomial_value > 0 &&
-      Array.isArray(explain.json.steps[4].anchors) &&
-      explain.json.steps[4].anchors.length === 6,
+      explain.json.steps[2].coefficient > 0 &&
+      Array.isArray(explain.json.steps[3].anchors) &&
+      explain.json.steps[3].anchors.length === 6,
     `${explain.json?.steps?.length} steps`,
   );
 
@@ -621,8 +621,8 @@ async function phase9() {
   const friendsList = await req('GET', '/api/friends');
   const forbiddenKeys = [
     'email', 'birth_date', 'height_cm', 'weight_kg', 'bodyweight_kg', 'current_weight_kg',
-    'notes', 'e1rm_kg', 'dots_points', 'adjusted_score', 'effective_load_kg',
-    'target_e1rm_kg', 'kg_needed', 'password_hash', 'password_salt',
+    'notes', 'e1rm_kg', 'adjusted_e1rm_kg', 'standards_kg', 'effective_load_kg',
+    'target_e1rm_kg', 'kg_needed', 'bodyweight_reps', 'password_hash', 'password_salt',
   ];
   const forbiddenValues = ['smoke-private', '1991-07-23', 'smoke-secret-note', '193', '87.3', '177.5'];
 

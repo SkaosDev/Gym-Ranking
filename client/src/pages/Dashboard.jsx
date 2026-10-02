@@ -15,13 +15,21 @@ import { onPerformancesChanged } from '../lib/performanceEvents.js';
 
 /** The sentence that makes the app engaging is this one, not the badge. */
 function NextDivisionLine({ entry }) {
-  if (!entry.next_division) {
+  const next = entry.next_division;
+  if (!next) {
     return <p className="next-line next-line--max">Nothing left above this. That is the ceiling.</p>;
+  }
+  // Push-ups and friends read better as a rep target than as kilograms.
+  if (entry.exercise.type === 'bodyweight' && next.bodyweight_reps) {
+    return (
+      <p className="next-line">
+        <strong className="tabular">{next.bodyweight_reps} reps</strong> in one set for {next.label}
+      </p>
+    );
   }
   return (
     <p className="next-line">
-      <strong className="tabular">{formatKg(entry.next_division.kg_needed)}</strong> to{' '}
-      {entry.next_division.label}
+      <strong className="tabular">+{formatKg(next.kg_needed)}</strong> on your best for {next.label}
     </p>
   );
 }

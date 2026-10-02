@@ -312,19 +312,18 @@ describe('GET /api/ranks/explain', () => {
     const res = await client.request('GET', `/api/ranks/explain/${created.json.id}`);
     assert.equal(res.status, 200, res.text);
 
-    const [load, e1rm, dots, age, index, rank] = res.json.steps;
+    const [load, e1rm, age, standards, index, rank] = res.json.steps;
     assert.equal(load.result_kg, 100);
     assert.ok(Math.abs(e1rm.epley.result_kg - 116.67) < 0.01);
     assert.ok(Math.abs(e1rm.brzycki.result_kg - 112.5) < 0.01);
     assert.ok(Math.abs(e1rm.result_kg - 114.58) < 0.01);
-    assert.ok(Math.abs(dots.polynomial_value - 773.27) < 0.01);
-    assert.ok(Math.abs(dots.result - 74.09) < 0.01);
     assert.equal(age.coefficient, 1);
     assert.match(age.table, /Peak strength/);
-    assert.equal(index.anchors.length, 6);
+    assert.equal(standards.anchors.length, 6);
+    assert.deepEqual(standards.anchors.slice(0, 5).map((a) => a.kg), [65, 85, 109, 137, 165]);
     assert.equal(index.segment.from.level, 'Intermediate');
     assert.equal(index.segment.to.level, 'Advanced');
-    assert.ok(Math.abs(index.result - 459.3) < 0.1);
+    assert.ok(Math.abs(index.result - 489.9) < 0.1);
     assert.equal(rank.result.label, 'Gold V');
   });
 

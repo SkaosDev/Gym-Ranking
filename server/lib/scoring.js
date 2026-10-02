@@ -4,26 +4,27 @@
  * on its own and what lets /rank-explained show the working.
  *
  * The pipeline is:
- *   effective load -> estimated 1RM -> DOTS points -> age adjustment
+ *   effective load -> estimated 1RM -> age adjustment
+ *   -> compared with the standards at the lifter's own bodyweight
  *   -> strength index (0-1000) -> rank and division
  */
 import {
   ANCHOR_INDICES,
   ANCHOR_LEVELS,
   DIVISIONS,
-  DOTS_BODYWEIGHT_BOUNDS,
   FLAGS,
   FOSTER_COEFFICIENTS,
   MAX_AGE_IN_TABLE,
   MAX_INDEX,
   MAX_RANKED_REPS,
+  MAX_RANKED_REPS_BODYWEIGHT,
   MCCULLOCH_COEFFICIENTS,
   MIN_AGE,
   PEAK_AGE_RANGE,
   RANKS,
-  dotsPolynomial,
+  STANDARDS,
+  WORLD_CLASS,
 } from './scoring-config.js';
-import { DOTS_THRESHOLDS } from './thresholds.js';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -119,71 +120,132 @@ export function effectiveLoad({ type, bwFactor = 0, bodyweightKg, weightKg }) {
 export const epley = (loadKg, reps) => loadKg * (1 + reps / 30);
 export const brzycki = (loadKg, reps) => (loadKg * 36) / (37 - reps);
 
-/**
- * A single rep is its own maximum. Between 2 and 12 reps both formulas sit
- * within about 5% of reality and err in opposite directions, so their mean is
- * steadier than either alone. Past 12 reps we return null rather than a number
- * we would have to disclaim.
- */
-export function estimate1rm(loadKg, reps) {
+/** Inverse of Epley: the reps at `loadKg` that equal a given 1RM. */
+export const epleyReps = (loadKg, oneRepMaxKg) => (oneRepMaxKg / loadKg - 1) * 30;
+
+function assertReps(reps) {
   if (!Number.isInteger(reps) || reps < 1) {
     throw new RangeError(`reps must be a positive integer, received ${reps}`);
   }
+}
+
+/**
+ * Barbell lifts. A single rep is its own maximum. Between 2 and 12 reps both
+ * formulas sit within about 5% of reality and err in opposite directions, so
+ * their mean is steadier than either alone. Past 12 reps we return null rather
+ * than a number we would have to disclaim.
+ */
+export function estimate1rm(loadKg, reps) {
+  assertReps(reps);
   if (reps === 1) return loadKg;
   if (reps > MAX_RANKED_REPS) return null;
   return (epley(loadKg, reps) + brzycki(loadKg, reps)) / 2;
 }
 
-// ---------------------------------------------------------------------------
-// Step 3 - DOTS bodyweight normalisation
-// ---------------------------------------------------------------------------
-
-/** Clamps rather than extrapolating a quartic beyond its fitted range. */
-export function clampBodyweight(sex, bodyweightKg) {
-  const bounds = DOTS_BODYWEIGHT_BOUNDS[sex];
-  if (!bounds) throw new TypeError(`unknown sex ${JSON.stringify(sex)}`);
-  const value = clamp(bodyweightKg, bounds.min, bounds.max);
-  return { value, clamped: value !== bodyweightKg };
+/**
+ * Bodyweight movements: Epley alone, up to 100 reps. Strength Level's rep
+ * tables and 1RM tables convert into each other with exactly this formula, so
+ * using it keeps fifteen pull-ups and three weighted ones on the same scale as
+ * the standards they are compared with. Brzycki is unusable here: it reaches
+ * zero at 37 reps.
+ */
+export function estimate1rmBodyweight(loadKg, reps) {
+  assertReps(reps);
+  if (reps === 1) return loadKg;
+  if (reps > MAX_RANKED_REPS_BODYWEIGHT) return null;
+  return epley(loadKg, reps);
 }
 
-export function dotsPoints(e1rmKg, sex, bodyweightKg) {
-  const { value } = clampBodyweight(sex, bodyweightKg);
-  return (e1rmKg * 500) / dotsPolynomial(sex, value);
+/** The right estimator for the exercise type. */
+export function estimate1rmFor(type, loadKg, reps) {
+  return type === 'bodyweight' ? estimate1rmBodyweight(loadKg, reps) : estimate1rm(loadKg, reps);
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 - age adjustment, applied by the caller as e1RM x coefficient
+// Step 4 - the standards at the lifter's own bodyweight
+// ---------------------------------------------------------------------------
+
+/** Linear interpolation of the row values at `bodyweightKg`, extended past the ends. */
+function interpolateRows(bodyweights, rows, bodyweightKg) {
+  const last = bodyweights.length - 1;
+  let i = 0;
+  while (i < last - 1 && bodyweightKg > bodyweights[i + 1]) i += 1;
+  const fraction = (bodyweightKg - bodyweights[i]) / (bodyweights[i + 1] - bodyweights[i]);
+  return rows[i].map((low, level) => low + fraction * (rows[i + 1][level] - low));
+}
+
+/**
+ * The six anchors, in kilograms of estimated 1RM, for this sex, exercise and
+ * bodyweight. For bodyweight movements the kilograms are effective load
+ * (bodyweight share plus added weight), so they compare with the set directly.
+ *
+ * Returns null when the exercise has no published standards.
+ */
+export function standardsFor(sex, exerciseCode, bodyweightKg, bwFactor = 1) {
+  const table = STANDARDS[sex]?.[exerciseCode];
+  if (!table) return null;
+
+  const { bodyweights, rows, kind } = table;
+  const outside = bodyweightKg < bodyweights[0] || bodyweightKg > bodyweights.at(-1);
+  const values = interpolateRows(bodyweights, rows, bodyweightKg);
+
+  // `base` is what the lifter moves for one rep with nothing added.
+  let base = 0;
+  let measured;
+  if (kind === 'one_rep_max') {
+    measured = values;
+  } else if (kind === 'added') {
+    base = bodyweightKg;
+    measured = values.map((added) => bodyweightKg + added);
+  } else {
+    base = bwFactor * bodyweightKg;
+    measured = values.map((reps) => epley(base, Math.max(reps, 0)));
+  }
+
+  const elite = measured.at(-1);
+  const worldClass =
+    kind === 'one_rep_max'
+      ? elite * WORLD_CLASS.barbell[exerciseCode]
+      : base + (elite - base) * WORLD_CLASS.bodyweightExcess;
+
+  // An extrapolated anchor must never fall to or below the one beneath it.
+  const anchorsKg = [...measured, worldClass];
+  for (let level = 0; level < anchorsKg.length; level += 1) {
+    const floor = level === 0 ? 0.5 : anchorsKg[level - 1] + 0.5;
+    anchorsKg[level] = Math.max(anchorsKg[level], floor);
+  }
+
+  return { kind, baseKg: base, anchorsKg, outside };
 }
 
 // ---------------------------------------------------------------------------
 // Step 5 - strength index
 // ---------------------------------------------------------------------------
 
-export function thresholdsFor(sex, exerciseCode) {
-  return DOTS_THRESHOLDS[sex]?.[exerciseCode] ?? null;
-}
+/** Piecewise linear over [0, ...anchors] mapped onto ANCHOR_INDICES. */
+export function strengthIndex(adjustedKg, anchorsKg) {
+  if (!anchorsKg) return null;
 
-/** Piecewise linear over [0, ...thresholds] mapped onto ANCHOR_INDICES. */
-export function strengthIndex(adjustedScore, sex, exerciseCode) {
-  const thresholds = thresholdsFor(sex, exerciseCode);
-  if (!thresholds) return null;
-
-  const points = [0, ...thresholds];
-  if (adjustedScore <= 0) return 0;
-  if (adjustedScore >= points.at(-1)) return MAX_INDEX;
+  const points = [0, ...anchorsKg];
+  if (adjustedKg <= 0) return 0;
+  if (adjustedKg >= points.at(-1)) return MAX_INDEX;
 
   for (let i = 0; i < points.length - 1; i += 1) {
-    if (adjustedScore <= points[i + 1]) {
+    if (adjustedKg <= points[i + 1]) {
       const span = points[i + 1] - points[i];
-      const fraction = span === 0 ? 0 : (adjustedScore - points[i]) / span;
+      const fraction = span === 0 ? 0 : (adjustedKg - points[i]) / span;
       return ANCHOR_INDICES[i] + fraction * (ANCHOR_INDICES[i + 1] - ANCHOR_INDICES[i]);
     }
   }
   return MAX_INDEX;
 }
 
-/** The inverse: the adjusted score an index corresponds to. */
-export function scoreForIndex(index, sex, exerciseCode) {
-  const thresholds = thresholdsFor(sex, exerciseCode);
-  if (!thresholds) return null;
+/** The inverse: the age-adjusted kilograms an index corresponds to. */
+export function kgForIndex(index, anchorsKg) {
+  if (!anchorsKg) return null;
 
-  const points = [0, ...thresholds];
+  const points = [0, ...anchorsKg];
   const target = clamp(index, 0, MAX_INDEX);
   if (target <= 0) return 0;
   if (target >= MAX_INDEX) return points.at(-1);
@@ -258,6 +320,25 @@ export function indexToRank(index) {
 // ---------------------------------------------------------------------------
 
 /**
+ * What a target 1RM means for this lifter in plain terms: kilograms on top of
+ * the current best, and for bodyweight movements the strict reps at bodyweight
+ * that would reach it in one set.
+ */
+export function targetFor({ targetE1rmKg, currentE1rmKg, exercise, bodyweightKg }) {
+  const target = {
+    targetE1rmKg: roundUp(targetE1rmKg),
+    kgNeeded: roundUp(Math.max(targetE1rmKg - currentE1rmKg, 0), 1),
+    bodyweightReps: null,
+  };
+  if (exercise.type === 'bodyweight') {
+    const base = exercise.bwFactor * bodyweightKg;
+    const reps = Math.max(1, Math.ceil(epleyReps(base, targetE1rmKg) - 1e-9));
+    target.bodyweightReps = reps <= MAX_RANKED_REPS_BODYWEIGHT ? reps : null;
+  }
+  return target;
+}
+
+/**
  * Scores one set end to end.
  *
  * @param {object} input
@@ -290,59 +371,49 @@ export function scoreLift({
   const { age, coefficient, flags: ageFlags } = ageCoefficient(birthDate, performedAt);
   flags.push(...ageFlags);
 
-  const { value: bodyweightForDots, clamped } = clampBodyweight(sex, bodyweightKg);
-  if (clamped) flags.push(flag('BODYWEIGHT_CLAMPED'));
+  const standards = standardsFor(sex, exercise.code, bodyweightKg, exercise.bwFactor);
+  if (standards?.outside) flags.push(flag('BODYWEIGHT_OUTSIDE_TABLE'));
 
-  const unranked = (extraFlag) => {
+  const unranked = (extraFlag, partial = {}) => {
     if (extraFlag) flags.push(flag(extraFlag));
     return {
       ranked: false,
       effectiveLoadKg: round(loadKg),
       e1rmKg: null,
-      dotsPoints: null,
       age,
       ageCoefficient: coefficient,
-      adjustedScore: null,
+      adjustedE1rmKg: null,
+      standardsKg: standards ? standards.anchorsKg.map((kg) => round(kg, 1)) : null,
       strengthIndex: null,
       rank: null,
       nextDivision: null,
       flags,
+      ...partial,
     };
   };
 
   if (loadKg <= 0) return unranked('NON_POSITIVE_LOAD');
 
-  const e1rmKg = estimate1rm(loadKg, reps);
+  const e1rmKg = estimate1rmFor(exercise.type, loadKg, reps);
   if (e1rmKg === null) return unranked('ENDURANCE_REPS');
 
-  const polynomial = dotsPolynomial(sex, bodyweightForDots);
-  const points = (e1rmKg * 500) / polynomial;
-  const adjustedScore = points * coefficient;
+  const adjustedE1rmKg = e1rmKg * coefficient;
 
-  const index = strengthIndex(adjustedScore, sex, exercise.code);
-  if (index === null) {
-    const partial = unranked('NO_ANCHORS');
-    return {
-      ...partial,
-      e1rmKg: round(e1rmKg),
-      dotsPoints: round(points),
-      adjustedScore: round(adjustedScore),
-    };
+  if (!standards) {
+    return unranked('NO_ANCHORS', { e1rmKg: round(e1rmKg), adjustedE1rmKg: round(adjustedE1rmKg) });
   }
 
+  const index = strengthIndex(adjustedE1rmKg, standards.anchorsKg);
   const rank = indexToRank(index);
 
-  // Kilograms still needed for the next division, at this bodyweight and as a
-  // single-rep equivalent. The delta is the same whether it is read as bar load
-  // or as added load, because the bodyweight contribution is constant.
+  // What the next division takes, at this bodyweight. The age coefficient is
+  // divided back out, so the figure is in real kilograms.
   let nextDivision = null;
   if (rank.nextDivision) {
-    const targetScore = scoreForIndex(rank.nextDivision.index, sex, exercise.code);
-    const targetE1rm = ((targetScore / coefficient) * polynomial) / 500;
+    const targetE1rmKg = kgForIndex(rank.nextDivision.index, standards.anchorsKg) / coefficient;
     nextDivision = {
       ...rank.nextDivision,
-      targetE1rmKg: roundUp(targetE1rm),
-      kgNeeded: roundUp(Math.max(targetE1rm - e1rmKg, 0), 1),
+      ...targetFor({ targetE1rmKg, currentE1rmKg: e1rmKg, exercise, bodyweightKg }),
     };
   }
 
@@ -350,10 +421,10 @@ export function scoreLift({
     ranked: true,
     effectiveLoadKg: round(loadKg),
     e1rmKg: round(e1rmKg),
-    dotsPoints: round(points),
     age,
     ageCoefficient: coefficient,
-    adjustedScore: round(adjustedScore),
+    adjustedE1rmKg: round(adjustedE1rmKg),
+    standardsKg: standards.anchorsKg.map((kg) => round(kg, 1)),
     strengthIndex: round(index, 1),
     rank,
     nextDivision,

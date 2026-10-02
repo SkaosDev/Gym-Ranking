@@ -8,41 +8,19 @@
 // ---------------------------------------------------------------------------
 
 /**
- * Above this many reps, Epley and Brzycki diverge by 15-20% and the set is
- * measuring muscular endurance rather than maximal strength. Such a set is
- * still stored in the history; it simply does not feed the rank.
+ * Barbell lifts: above this many reps, Epley and Brzycki diverge by 15-20% and
+ * the set is measuring muscular endurance rather than maximal strength. Such a
+ * set is still stored in the history; it simply does not feed the rank.
  */
 export const MAX_RANKED_REPS = 12;
 
-// ---------------------------------------------------------------------------
-// DOTS bodyweight normalisation
-// ---------------------------------------------------------------------------
-
 /**
- * Fourth-degree polynomial coefficients [a, b, c, d, e] for
- * P(bw) = a + b*bw + c*bw^2 + d*bw^3 + e*bw^4.
- *
- * DOTS is the coefficient most powerlifting federations adopted around
- * 2019-2020 to replace Wilks, which flattered very heavy men and penalised
- * light and heavy women.
+ * Bodyweight movements are scored with Epley alone, because that is the
+ * conversion Strength Level itself uses between its rep tables and its 1RM
+ * tables, so it is the one that keeps us consistent with the standards. Their
+ * standards go up to about 100 strict push-ups, hence the higher ceiling.
  */
-export const DOTS_COEFFICIENTS = {
-  M: [-307.75076, 24.0900756, -0.1918759221, 0.0007391293, -0.000001093],
-  F: [-57.96288, 13.6175032, -0.1126655495, 0.0005158568, -0.0000010706],
-};
-
-/**
- * The polynomial is fitted on adult competitive bodyweights. Outside this
- * range we clamp to the nearest bound and flag it rather than extrapolating a
- * quartic curve that turns over.
- */
-export const DOTS_BODYWEIGHT_BOUNDS = {
-  M: { min: 40, max: 210 },
-  F: { min: 40, max: 150 },
-};
-
-/** Reference bodyweight the strength anchors are expressed at, per sex. */
-export const REFERENCE_BODYWEIGHT_KG = { M: 90, F: 65 };
+export const MAX_RANKED_REPS_BODYWEIGHT = 100;
 
 // ---------------------------------------------------------------------------
 // Age coefficients (the tables used by USA Powerlifting)
@@ -84,11 +62,18 @@ export const MIN_AGE = 14;
 export const MAX_AGE_IN_TABLE = 90;
 
 // ---------------------------------------------------------------------------
-// Strength anchors
+// Strength standards, by sex and bodyweight
 // ---------------------------------------------------------------------------
 
+/**
+ * The five measured levels come from Strength Level (strengthlevel.com,
+ * fetched October 2026), built from about seven million logged lifts. Each
+ * level is a percentile of lifters: Beginner beats 5%, Novice 20%,
+ * Intermediate 50%, Advanced 80%, Elite 95%. A sixth, World-class, is derived
+ * from raw powerlifting records (see WORLD_CLASS below).
+ */
 export const ANCHOR_LEVELS = [
-  'Untrained',
+  'Beginner',
   'Novice',
   'Intermediate',
   'Advanced',
@@ -101,32 +86,164 @@ export const ANCHOR_INDICES = [0, 100, 250, 450, 650, 825, 1000];
 
 export const MAX_INDEX = 1000;
 
+const MEN_BARBELL_BW = [50, 60, 70, 80, 90, 100, 110, 120];
+const WOMEN_BARBELL_BW = [40, 50, 60, 70, 80, 90, 100];
+const MEN_BODYWEIGHT_BW = [50, 60, 70, 80, 90, 100];
+const WOMEN_BODYWEIGHT_BW = [40, 50, 60, 70, 80, 90];
+
 /**
- * Bodyweight multiples at the reference bodyweight, in ANCHOR_LEVELS order.
+ * One row per bodyweight, five values per row (Beginner to Elite).
  *
- * Pull-up and dip multiples are of the TOTAL load including bodyweight, so
- * 1.00 is one strict unweighted rep. Push-up multiples apply to the effective
- * load, which already has the 0.70 bodyweight factor applied upstream.
+ *   kind 'one_rep_max'  barbell 1RM in kg
+ *   kind 'added'        1RM as weight added to bodyweight (negative = assisted)
+ *   kind 'reps'         strict reps at bodyweight; Strength Level publishes no
+ *                       loaded push-up table, so reps are the standard
+ *
+ * Between two rows the values are interpolated linearly, so the standards are
+ * those of the lifter's own bodyweight rather than of a reference lifter.
  */
-export const ANCHOR_MULTIPLES = {
+export const STANDARDS = {
   M: {
-    squat:    [0.75, 1.25, 1.75, 2.5,  3.0,  3.6],
-    bench:    [0.5,  0.75, 1.25, 1.75, 2.1,  2.6],
-    deadlift: [1.0,  1.5,  2.25, 3.0,  3.5,  4.2],
-    ohp:      [0.35, 0.55, 0.8,  1.1,  1.3,  1.6],
-    pullup:   [1.0,  1.15, 1.4,  1.75, 2.0,  2.4],
-    dip:      [1.0,  1.2,  1.45, 1.8,  2.05, 2.45],
-    pushup:   [0.5,  0.6,  0.7,  0.85, 0.95, 1.1],
+    squat: {
+      kind: 'one_rep_max',
+      bodyweights: MEN_BARBELL_BW,
+      rows: [
+        [36, 55, 78, 106, 137], [49, 71, 98, 129, 162], [62, 86, 116, 149, 185],
+        [75, 101, 132, 168, 206], [87, 115, 148, 186, 226], [98, 128, 163, 203, 244],
+        [109, 140, 177, 218, 261], [120, 152, 191, 233, 278],
+      ],
+    },
+    bench: {
+      kind: 'one_rep_max',
+      bodyweights: MEN_BARBELL_BW,
+      rows: [
+        [27, 41, 58, 78, 101], [37, 53, 72, 95, 119], [47, 64, 85, 110, 136],
+        [56, 75, 98, 124, 151], [65, 85, 109, 137, 165], [73, 95, 120, 149, 179],
+        [81, 104, 131, 160, 191], [89, 113, 140, 171, 203],
+      ],
+    },
+    deadlift: {
+      kind: 'one_rep_max',
+      bodyweights: MEN_BARBELL_BW,
+      rows: [
+        [46, 68, 96, 129, 164], [61, 86, 117, 153, 191], [75, 103, 137, 175, 216],
+        [89, 119, 155, 196, 239], [102, 134, 172, 215, 260], [114, 148, 188, 232, 279],
+        [126, 161, 203, 249, 298], [137, 174, 217, 265, 315],
+      ],
+    },
+    ohp: {
+      kind: 'one_rep_max',
+      bodyweights: MEN_BARBELL_BW,
+      rows: [
+        [15, 24, 36, 51, 67], [21, 32, 45, 62, 79], [27, 39, 54, 72, 90],
+        [33, 46, 62, 81, 101], [38, 53, 70, 90, 111], [44, 59, 77, 98, 120],
+        [49, 65, 84, 105, 128], [54, 71, 90, 113, 136],
+      ],
+    },
+    pullup: {
+      kind: 'added',
+      bodyweights: MEN_BODYWEIGHT_BW,
+      rows: [
+        [-5, 7, 22, 39, 56], [-4, 11, 27, 45, 64], [-2, 13, 31, 50, 71],
+        [-2, 14, 33, 54, 75], [-2, 15, 35, 57, 79], [-3, 15, 36, 59, 82],
+      ],
+    },
+    dip: {
+      kind: 'added',
+      bodyweights: MEN_BODYWEIGHT_BW,
+      rows: [
+        [-5, 11, 31, 54, 78], [-1, 17, 39, 64, 91], [2, 22, 46, 73, 101],
+        [5, 26, 52, 81, 111], [6, 30, 57, 87, 118], [8, 32, 61, 92, 125],
+      ],
+    },
+    pushup: {
+      kind: 'reps',
+      bodyweights: MEN_BODYWEIGHT_BW,
+      rows: [
+        [1, 18, 42, 70, 102], [4, 19, 41, 67, 95], [5, 20, 40, 64, 89],
+        [6, 20, 38, 60, 84], [6, 19, 37, 57, 79], [6, 19, 35, 54, 74],
+      ],
+    },
   },
   F: {
-    squat:    [0.5,  0.85, 1.25, 1.75, 2.15, 2.6],
-    bench:    [0.35, 0.5,  0.75, 1.0,  1.25, 1.6],
-    deadlift: [0.6,  1.0,  1.5,  2.1,  2.5,  3.0],
-    ohp:      [0.2,  0.35, 0.5,  0.7,  0.85, 1.05],
-    pullup:   [0.85, 1.0,  1.15, 1.4,  1.6,  1.95],
-    dip:      [0.85, 1.05, 1.2,  1.45, 1.65, 2.0],
-    pushup:   [0.4,  0.5,  0.6,  0.72, 0.82, 0.95],
+    squat: {
+      kind: 'one_rep_max',
+      bodyweights: WOMEN_BARBELL_BW,
+      rows: [
+        [19, 34, 53, 76, 102], [26, 42, 63, 88, 116], [32, 49, 72, 99, 129],
+        [37, 56, 80, 109, 140], [42, 62, 88, 117, 149], [47, 68, 94, 125, 158],
+        [52, 74, 101, 132, 166],
+      ],
+    },
+    bench: {
+      kind: 'one_rep_max',
+      bodyweights: WOMEN_BARBELL_BW,
+      rows: [
+        [10, 19, 33, 49, 68], [14, 25, 40, 58, 79], [19, 31, 47, 66, 88],
+        [22, 36, 53, 74, 96], [26, 40, 59, 80, 104], [30, 45, 64, 86, 111],
+        [33, 49, 69, 92, 117],
+      ],
+    },
+    deadlift: {
+      kind: 'one_rep_max',
+      bodyweights: WOMEN_BARBELL_BW,
+      rows: [
+        [26, 43, 65, 92, 121], [34, 52, 76, 105, 136], [40, 60, 86, 116, 149],
+        [46, 68, 95, 126, 160], [52, 74, 102, 135, 170], [57, 80, 109, 143, 180],
+        [61, 86, 116, 151, 188],
+      ],
+    },
+    ohp: {
+      kind: 'one_rep_max',
+      bodyweights: WOMEN_BARBELL_BW,
+      rows: [
+        [7, 13, 22, 33, 45], [10, 17, 27, 38, 51], [12, 20, 31, 43, 57],
+        [15, 23, 34, 47, 62], [17, 26, 37, 51, 66], [19, 28, 40, 54, 70],
+        [21, 31, 43, 58, 74],
+      ],
+    },
+    pullup: {
+      kind: 'added',
+      bodyweights: WOMEN_BODYWEIGHT_BW,
+      rows: [
+        [-14, -5, 6, 17, 30], [-14, -4, 8, 21, 35], [-16, -4, 9, 23, 38],
+        [-18, -5, 9, 24, 40], [-20, -7, 8, 24, 41], [-23, -9, 7, 24, 41],
+      ],
+    },
+    dip: {
+      kind: 'added',
+      bodyweights: WOMEN_BODYWEIGHT_BW,
+      rows: [
+        [-15, -4, 10, 26, 44], [-15, -2, 14, 32, 52], [-15, 0, 17, 37, 58],
+        [-16, 0, 19, 40, 62], [-17, 0, 20, 42, 66], [-19, -1, 20, 43, 68],
+      ],
+    },
+    pushup: {
+      // Strength Level lists Beginner as "fewer than one": 0 here.
+      kind: 'reps',
+      bodyweights: WOMEN_BODYWEIGHT_BW,
+      rows: [
+        [0, 5, 19, 36, 55], [0, 7, 19, 34, 51], [0, 7, 18, 32, 47],
+        [0, 7, 17, 30, 43], [0, 7, 16, 28, 40], [0, 6, 15, 26, 37],
+      ],
+    },
   },
+};
+
+/**
+ * World-class, the sixth anchor. Raw IPF records divided by Strength Level's
+ * Elite at the same bodyweight come out at 1.54-1.60 for the three
+ * powerlifts (OpenPowerlifting, men ~80 kg and women ~60 kg), so World-class
+ * is Elite times that ratio. The overhead press is not a competition lift and
+ * takes 1.5 by analogy.
+ *
+ * For bodyweight movements the factor applies only to the part above the
+ * bodyweight itself: a 70 kg man's world-class pull-up is then about +106 kg,
+ * which is where weighted pull-up records sit.
+ */
+export const WORLD_CLASS = {
+  barbell: { squat: 1.55, bench: 1.55, deadlift: 1.6, ohp: 1.5 },
+  bodyweightExcess: 1.5,
 };
 
 // ---------------------------------------------------------------------------
@@ -138,12 +255,12 @@ export const ANCHOR_MULTIPLES = {
  * rank splits into five equal divisions, V through I, I being the highest.
  */
 export const RANKS = [
-  { name: 'Iron',     min: 0,   max: 99,   color: '#6b7280', meaning: 'untrained' },
-  { name: 'Bronze',   min: 100, max: 249,  color: '#b4652a', meaning: 'beginner' },
-  { name: 'Silver',   min: 250, max: 449,  color: '#8a94a3', meaning: 'around six months of consistent training' },
-  { name: 'Gold',     min: 450, max: 649,  color: '#d4a017', meaning: 'intermediate, one to two years' },
-  { name: 'Platinum', min: 650, max: 824,  color: '#14b8a6', meaning: 'advanced, three to five years' },
-  { name: 'Diamond',  min: 825, max: 924,  color: '#0ea5e9', meaning: 'amateur elite' },
+  { name: 'Iron',     min: 0,   max: 99,   color: '#6b7280', meaning: 'below the beginner standard' },
+  { name: 'Bronze',   min: 100, max: 249,  color: '#b4652a', meaning: 'beginner, stronger than about 5% of lifters' },
+  { name: 'Silver',   min: 250, max: 449,  color: '#8a94a3', meaning: 'novice, stronger than about 20% of lifters' },
+  { name: 'Gold',     min: 450, max: 649,  color: '#d4a017', meaning: 'intermediate, stronger than about half of lifters' },
+  { name: 'Platinum', min: 650, max: 824,  color: '#14b8a6', meaning: 'advanced, stronger than about 80% of lifters' },
+  { name: 'Diamond',  min: 825, max: 924,  color: '#0ea5e9', meaning: 'elite, stronger than about 95% of lifters' },
   { name: 'Master',   min: 925, max: 979,  color: '#8b5cf6', meaning: 'national-level competitor' },
   {
     name: 'Unkillable Demon King',
@@ -153,7 +270,7 @@ export const RANKS = [
     max: 1000,
     color: '#dc2626',
     gradient: 'linear-gradient(90deg, #dc2626 0%, #d4a017 100%)',
-    meaning: 'world-class',
+    meaning: 'world-record territory',
   },
 ];
 
@@ -166,9 +283,9 @@ export const DIVISIONS = ['V', 'IV', 'III', 'II', 'I'];
 
 export const FLAGS = {
   ENDURANCE_REPS:
-    'Above 12 reps the 1RM formulas diverge and measure endurance rather than maximal strength, so this set does not count toward your rank.',
-  BODYWEIGHT_CLAMPED:
-    'Bodyweight falls outside the range the DOTS formula was fitted on, so it was clamped to the nearest bound.',
+    'Above 12 reps on a barbell lift the 1RM formulas diverge and measure endurance rather than maximal strength, so this set does not count toward your rank.',
+  BODYWEIGHT_OUTSIDE_TABLE:
+    'Your bodyweight is outside the range the published standards cover, so they were extended from the nearest bodyweights.',
   AGE_BELOW_TABLE:
     'Age on the performance date is below 14, where no published coefficient applies; the value for 14 was used.',
   AGE_ABOVE_TABLE:
@@ -176,17 +293,6 @@ export const FLAGS = {
   NON_POSITIVE_LOAD:
     'The effective load works out at zero or less, so no strength estimate can be made from this set.',
   NO_ANCHORS:
-    'This exercise has no calibrated strength standards, so it is tracked but not ranked.',
+    'This exercise has no published strength standards, so it is tracked but not ranked.',
 };
 
-// ---------------------------------------------------------------------------
-
-/**
- * P(bw) = a + b*bw + c*bw^2 + d*bw^3 + e*bw^4.
- * No bounds checking: callers clamp the bodyweight first.
- */
-export function dotsPolynomial(sex, bodyweightKg) {
-  const [a, b, c, d, e] = DOTS_COEFFICIENTS[sex];
-  const bw = bodyweightKg;
-  return a + b * bw + c * bw ** 2 + d * bw ** 3 + e * bw ** 4;
-}

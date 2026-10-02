@@ -4,28 +4,26 @@
  * rather than a black box.
  */
 import {
+  ageCoefficientForAge,
   ageOn,
   brzycki,
-  clampBodyweight,
   effectiveLoad,
   epley,
-  estimate1rm,
+  epleyReps,
+  estimate1rmFor,
   indexToRank,
+  standardsFor,
   strengthIndex,
-  thresholdsFor,
-  ageCoefficientForAge,
 } from '../lib/scoring.js';
 import {
   ANCHOR_INDICES,
   ANCHOR_LEVELS,
-  DOTS_COEFFICIENTS,
-  DOTS_BODYWEIGHT_BOUNDS,
   MAX_AGE_IN_TABLE,
   MAX_RANKED_REPS,
+  MAX_RANKED_REPS_BODYWEIGHT,
   MIN_AGE,
   PEAK_AGE_RANGE,
-  REFERENCE_BODYWEIGHT_KG,
-  dotsPolynomial,
+  STANDARDS,
 } from '../lib/scoring-config.js';
 import { ApiError } from '../lib/errors.js';
 import { getPerformanceOr404, makeBodyweightResolver } from './performances.js';
@@ -53,8 +51,7 @@ export function explainPerformance(user, performanceId) {
   }
 
   const bodyweightKg = weight.weight_kg;
-  const { value: bodyweightUsed, clamped } = clampBodyweight(user.sex, bodyweightKg);
-  const bounds = DOTS_BODYWEIGHT_BOUNDS[user.sex];
+  const isBodyweight = row.exercise_type === 'bodyweight';
 
   // Step 1 --------------------------------------------------------------
   const loadKg = effectiveLoad({
@@ -66,110 +63,115 @@ export function explainPerformance(user, performanceId) {
 
   const step1 = {
     title: 'Effective load',
-    formula:
-      row.exercise_type === 'external'
-        ? 'load = weight on the bar'
-        : 'load = bodyweight factor x bodyweight + added weight',
+    formula: isBodyweight
+      ? 'load = share of bodyweight moved x bodyweight + added weight'
+      : 'load = weight on the bar',
     inputs: {
       exercise_type: row.exercise_type,
       bw_factor: row.bw_factor,
       bodyweight_kg: bodyweightKg,
       weight_kg: row.weight_kg,
     },
-    working:
-      row.exercise_type === 'external'
-        ? `${row.weight_kg} kg`
-        : `${row.bw_factor} x ${bodyweightKg} + ${row.weight_kg} = ${round(loadKg)}`,
+    working: isBodyweight
+      ? `${row.bw_factor} x ${bodyweightKg} + ${row.weight_kg} = ${round(loadKg)} kg`
+      : `${row.weight_kg} kg`,
     result_kg: round(loadKg),
   };
 
   // Step 2 --------------------------------------------------------------
-  const e1rmKg = loadKg > 0 ? estimate1rm(loadKg, row.reps) : null;
-  const step2 =
-    row.reps > MAX_RANKED_REPS
-      ? {
-          title: 'Estimated one-rep max',
-          excluded: true,
-          reason: `Above ${MAX_RANKED_REPS} reps, Epley and Brzycki diverge by 15-20% and the set measures endurance rather than maximal strength. It stays in your history but does not feed your rank.`,
-          inputs: { reps: row.reps },
-          result_kg: null,
-        }
-      : {
-          title: 'Estimated one-rep max',
-          formula:
-            row.reps === 1
-              ? 'A single rep is already the maximum'
-              : 'mean of Epley and Brzycki, which err in opposite directions',
-          inputs: { load_kg: round(loadKg), reps: row.reps },
-          epley:
-            row.reps === 1
-              ? null
-              : { formula: 'load x (1 + reps / 30)', result_kg: round(epley(loadKg, row.reps)) },
-          brzycki:
-            row.reps === 1
-              ? null
-              : { formula: 'load x 36 / (37 - reps)', result_kg: round(brzycki(loadKg, row.reps)) },
-          result_kg: round(e1rmKg),
-        };
+  const repLimit = isBodyweight ? MAX_RANKED_REPS_BODYWEIGHT : MAX_RANKED_REPS;
+  const e1rmKg = loadKg > 0 ? estimate1rmFor(row.exercise_type, loadKg, row.reps) : null;
+
+  let step2;
+  if (row.reps > repLimit) {
+    step2 = {
+      title: 'Estimated one-rep max',
+      excluded: true,
+      reason: isBodyweight
+        ? `Above ${repLimit} reps no formula says anything useful about maximal strength. The set stays in your history but does not feed your rank.`
+        : `Above ${repLimit} reps on a barbell, Epley and Brzycki diverge by 15-20% and the set measures endurance rather than maximal strength. It stays in your history but does not feed your rank.`,
+      inputs: { reps: row.reps },
+      result_kg: null,
+    };
+  } else if (row.reps === 1) {
+    step2 = {
+      title: 'Estimated one-rep max',
+      formula: 'A single rep is already the maximum',
+      inputs: { load_kg: round(loadKg), reps: row.reps },
+      epley: null,
+      brzycki: null,
+      result_kg: round(e1rmKg),
+    };
+  } else {
+    step2 = {
+      title: 'Estimated one-rep max',
+      formula: isBodyweight
+        ? 'Epley, the formula the bodyweight standards themselves are converted with'
+        : 'mean of Epley and Brzycki, which err in opposite directions',
+      inputs: { load_kg: round(loadKg), reps: row.reps },
+      epley: { formula: 'load x (1 + reps / 30)', result_kg: round(epley(loadKg, row.reps)) },
+      brzycki: isBodyweight
+        ? null
+        : { formula: 'load x 36 / (37 - reps)', result_kg: round(brzycki(loadKg, row.reps)) },
+      result_kg: round(e1rmKg),
+    };
+  }
 
   // Step 3 --------------------------------------------------------------
-  const polynomial = dotsPolynomial(user.sex, bodyweightUsed);
-  const dotsPoints = e1rmKg === null ? null : (e1rmKg * 500) / polynomial;
-
-  const step3 = {
-    title: 'Bodyweight normalisation (DOTS)',
-    formula: 'DOTS = estimated 1RM x 500 / P(bodyweight),  P(bw) = a + b*bw + c*bw^2 + d*bw^3 + e*bw^4',
-    note: 'DOTS is the coefficient most powerlifting federations adopted around 2019-2020, replacing Wilks.',
-    inputs: {
-      sex: user.sex,
-      bodyweight_kg: bodyweightKg,
-      bodyweight_used_kg: bodyweightUsed,
-      clamped,
-      bounds,
-      coefficients: DOTS_COEFFICIENTS[user.sex],
-    },
-    polynomial_value: round(polynomial, 5),
-    result: round(dotsPoints),
-  };
-
-  // Step 4 --------------------------------------------------------------
   const age = ageOn(user.birth_date, row.performed_at);
   const { coefficient } = ageCoefficientForAge(age);
-  const adjustedScore = dotsPoints === null ? null : dotsPoints * coefficient;
+  const adjustedKg = e1rmKg === null ? null : e1rmKg * coefficient;
 
-  const step4 = {
+  const step3 = {
     title: 'Age adjustment',
-    formula: 'adjusted score = DOTS x age coefficient',
+    formula: 'adjusted 1RM = estimated 1RM x age coefficient',
     note: 'Age is taken as of the day of the performance, not today.',
     inputs: { birth_date: user.birth_date, performed_at: row.performed_at },
     age,
     table: ageTableFor(age),
     coefficient,
-    raw_score: round(dotsPoints),
-    result: round(adjustedScore),
+    raw_kg: round(e1rmKg),
+    result_kg: round(adjustedKg),
+  };
+
+  // Step 4 --------------------------------------------------------------
+  const standards = standardsFor(user.sex, row.exercise_code, bodyweightKg, row.bw_factor);
+  const table = STANDARDS[user.sex]?.[row.exercise_code];
+
+  const step4 = {
+    title: `The standards at your bodyweight (${bodyweightKg} kg)`,
+    formula: 'published standards for your sex, interpolated between the two nearest bodyweights',
+    note: standards?.outside
+      ? `Your bodyweight is outside the ${table.bodyweights[0]}-${table.bodyweights.at(-1)} kg the standards cover, so they were extended from the nearest bodyweights.`
+      : 'Beginner to Elite: Strength Level, from about seven million logged lifts. World-class: derived from raw powerlifting records.',
+    kind: standards?.kind ?? null,
+    anchors: (standards?.anchorsKg ?? []).map((kg, i) => ({
+      level: ANCHOR_LEVELS[i],
+      kg: round(kg, 1),
+      // For a bodyweight movement the same anchor read as strict reps.
+      bodyweight_reps:
+        isBodyweight && standards.baseKg > 0
+          ? Math.max(0, Math.round(epleyReps(row.bw_factor * bodyweightKg, kg)))
+          : null,
+      index: ANCHOR_INDICES[i + 1],
+      reached: adjustedKg !== null && adjustedKg >= kg,
+    })),
   };
 
   // Step 5 --------------------------------------------------------------
-  const thresholds = thresholdsFor(user.sex, row.exercise_code);
-  const index = adjustedScore === null ? null : strengthIndex(adjustedScore, user.sex, row.exercise_code);
-
-  const anchorTable = (thresholds ?? []).map((dots, i) => ({
-    level: ANCHOR_LEVELS[i],
-    dots_points: round(dots),
-    index: ANCHOR_INDICES[i + 1],
-    reached: adjustedScore !== null && adjustedScore >= dots,
-  }));
+  const anchors = standards?.anchorsKg ?? null;
+  const index = adjustedKg === null || !anchors ? null : strengthIndex(adjustedKg, anchors);
 
   let segment = null;
-  if (index !== null && thresholds) {
-    const points = [0, ...thresholds];
+  if (index !== null) {
+    const points = [0, ...anchors];
     for (let i = 0; i < points.length - 1; i += 1) {
-      if (adjustedScore <= points[i + 1] || i === points.length - 2) {
+      if (adjustedKg <= points[i + 1] || i === points.length - 2) {
         segment = {
-          from: { level: i === 0 ? 'Zero' : ANCHOR_LEVELS[i - 1], dots_points: round(points[i]), index: ANCHOR_INDICES[i] },
-          to: { level: ANCHOR_LEVELS[i], dots_points: round(points[i + 1]), index: ANCHOR_INDICES[i + 1] },
+          from: { level: i === 0 ? 'Zero' : ANCHOR_LEVELS[i - 1], kg: round(points[i], 1), index: ANCHOR_INDICES[i] },
+          to: { level: ANCHOR_LEVELS[i], kg: round(points[i + 1], 1), index: ANCHOR_INDICES[i + 1] },
           fraction: round(
-            points[i + 1] === points[i] ? 0 : (adjustedScore - points[i]) / (points[i + 1] - points[i]),
+            Math.min(1, points[i + 1] === points[i] ? 0 : (adjustedKg - points[i]) / (points[i + 1] - points[i])),
             4,
           ),
         };
@@ -180,9 +182,7 @@ export function explainPerformance(user, performanceId) {
 
   const step5 = {
     title: 'Strength index (0 to 1000)',
-    formula: 'linear interpolation between the calibrated anchors for this exercise and sex',
-    note: `Anchors are published strength standards expressed at a reference bodyweight of ${REFERENCE_BODYWEIGHT_KG[user.sex]} kg, converted to DOTS points.`,
-    anchors: anchorTable,
+    formula: 'linear interpolation between the two standards your lift falls between',
     segment,
     result: index === null ? null : round(index, 1),
   };

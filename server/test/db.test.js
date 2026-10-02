@@ -82,7 +82,7 @@ describe('exercise seed', () => {
 
   it('carries the bodyweight factors and global weights', () => {
     const byCode = Object.fromEntries(all('SELECT * FROM exercises').map((r) => [r.code, r]));
-    assert.equal(byCode.pushup.bw_factor, 0.7);
+    assert.equal(byCode.pushup.bw_factor, 0.64);
     assert.equal(byCode.pullup.bw_factor, 1);
     assert.equal(byCode.squat.bw_factor, 0);
     assert.equal(byCode.dip.global_weight, 0);

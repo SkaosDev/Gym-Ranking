@@ -9,11 +9,11 @@ import { all, get } from '../lib/db.js';
 import {
   ageCoefficientForAge,
   ageOn,
-  clampBodyweight,
   indexToRank,
-  scoreForIndex,
+  kgForIndex,
+  standardsFor,
+  targetFor,
 } from '../lib/scoring.js';
-import { dotsPolynomial } from '../lib/scoring-config.js';
 import { latestBodyweight } from '../lib/users.js';
 import { makeBodyweightResolver, scoreRow } from './performances.js';
 
@@ -60,14 +60,13 @@ const roundUp = (value, decimals = 1) => {
 };
 
 /**
- * What an index is worth in kilograms for this user right now: at today's
- * bodyweight and today's age coefficient, as a single-rep equivalent.
+ * What an index is worth in real kilograms for this user right now: at
+ * today's bodyweight and today's age coefficient, as a single-rep equivalent.
  */
-function kilogramsForIndex({ index, sex, exerciseCode, bodyweightKg, ageCoefficient }) {
-  const score = scoreForIndex(index, sex, exerciseCode);
-  if (score === null) return null;
-  const { value } = clampBodyweight(sex, bodyweightKg);
-  return ((score / ageCoefficient) * dotsPolynomial(sex, value)) / 500;
+function kilogramsForIndex({ index, sex, exercise, bodyweightKg, ageCoefficient }) {
+  const standards = standardsFor(sex, exercise.code, bodyweightKg, exercise.bw_factor);
+  if (!standards) return null;
+  return kgForIndex(index, standards.anchorsKg) / ageCoefficient;
 }
 
 /**
@@ -109,8 +108,7 @@ export function computeRanks(user, { asOf = today() } = {}) {
         performed_at: row.performed_at,
         strength_index: row.strength_index,
         e1rm_kg: row.e1rm_kg,
-        dots_points: row.dots_points,
-        adjusted_score: row.adjusted_score,
+        adjusted_e1rm_kg: row.adjusted_e1rm_kg,
         rank: row.rank,
       };
 
@@ -153,26 +151,34 @@ export function computeRanks(user, { asOf = today() } = {}) {
       const currentKg = kilogramsForIndex({
         index: effectiveIndex,
         sex: user.sex,
-        exerciseCode: exercise.code,
+        exercise,
         bodyweightKg: currentBodyweightKg,
         ageCoefficient,
       });
       const targetKg = kilogramsForIndex({
         index: rank.nextDivision.index,
         sex: user.sex,
-        exerciseCode: exercise.code,
+        exercise,
         bodyweightKg: currentBodyweightKg,
         ageCoefficient,
       });
 
       if (currentKg !== null && targetKg !== null) {
+        const target = targetFor({
+          targetE1rmKg: targetKg,
+          currentE1rmKg: currentKg,
+          exercise: { type: exercise.type, bwFactor: exercise.bw_factor },
+          bodyweightKg: currentBodyweightKg,
+        });
         nextDivision = {
           rank: rank.nextDivision.rank,
           division: rank.nextDivision.division,
           label: rank.nextDivision.label,
           index: rank.nextDivision.index,
           target_e1rm_kg: roundUp(targetKg, 1),
-          kg_needed: roundUp(Math.max(targetKg - currentKg, 0), 1),
+          kg_needed: target.kgNeeded,
+          // For a bodyweight movement, the strict reps at bodyweight that reach it.
+          bodyweight_reps: target.bodyweightReps,
           // For a bodyweight movement the same target read as added load.
           target_added_load_kg:
             exercise.type === 'bodyweight'

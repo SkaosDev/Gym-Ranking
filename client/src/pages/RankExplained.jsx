@@ -143,66 +143,44 @@ export default function RankExplained() {
                 )}
               </StepCard>
 
-              {/* 3. DOTS */}
+              {/* 3. Age */}
               <StepCard number={3} step={data.steps[2]}>
                 <dl className="figure-row">
-                  <Figure
-                    label={`P(${formatNumber(data.steps[2].inputs.bodyweight_used_kg)})`}
-                    value={formatNumber(data.steps[2].polynomial_value, 2)}
-                  />
-                  <Figure label="DOTS points" value={formatNumber(data.steps[2].result, 2)} />
+                  <Figure label="Age on the day" value={data.steps[2].age} hint={data.steps[2].table} />
+                  <Figure label="Coefficient" value={`× ${data.steps[2].coefficient}`} />
+                  <Figure label="Adjusted 1RM" value={formatKg(data.steps[2].result_kg)} />
                 </dl>
-                {data.steps[2].inputs.clamped && (
-                  <div className="notice notice--warning">
-                    <Icon name="warning" />
-                    <span>
-                      Your bodyweight sits outside the {data.steps[2].inputs.bounds.min}&ndash;
-                      {data.steps[2].inputs.bounds.max} kg range the formula was fitted on, so it was
-                      clamped rather than extrapolated.
-                    </span>
-                  </div>
-                )}
               </StepCard>
 
-              {/* 4. Age */}
+              {/* 4. Standards at this bodyweight */}
               <StepCard number={4} step={data.steps[3]}>
-                <dl className="figure-row">
-                  <Figure
-                    label="Age on the day"
-                    value={data.steps[3].age}
-                    hint={data.steps[3].table}
-                  />
-                  <Figure label="Raw score" value={formatNumber(data.steps[3].raw_score, 2)} />
-                  <Figure
-                    label="Age-adjusted score"
-                    value={formatNumber(data.steps[3].result, 2)}
-                    hint={`× ${data.steps[3].coefficient}`}
-                  />
-                </dl>
-              </StepCard>
-
-              {/* 5. Index */}
-              <StepCard number={5} step={data.steps[4]}>
                 <div className="table-wrap">
                   <table>
-                    <caption>Calibrated anchors for this exercise</caption>
                     <thead>
                       <tr>
                         <th scope="col">Level</th>
                         <th scope="col" className="numeric">
-                          DOTS needed
+                          1RM needed
                         </th>
+                        {data.performance.exercise_type === 'bodyweight' && (
+                          <th scope="col" className="numeric">
+                            or reps at bodyweight
+                          </th>
+                        )}
                         <th scope="col" className="numeric">
-                          Index
+                          Score
                         </th>
                         <th scope="col">Reached</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.steps[4].anchors.map((anchor) => (
+                      {data.steps[3].anchors.map((anchor) => (
                         <tr key={anchor.level}>
                           <td>{anchor.level}</td>
-                          <td className="numeric">{formatNumber(anchor.dots_points, 1)}</td>
+                          <td className="numeric">{formatKg(anchor.kg)}</td>
+                          {data.performance.exercise_type === 'bodyweight' && (
+                            <td className="numeric">{anchor.bodyweight_reps}</td>
+                          )}
                           <td className="numeric">{anchor.index}</td>
                           <td>
                             {anchor.reached ? (
@@ -221,25 +199,26 @@ export default function RankExplained() {
                     </tbody>
                   </table>
                 </div>
+              </StepCard>
 
+              {/* 5. Index */}
+              <StepCard number={5} step={data.steps[4]}>
                 {data.steps[4].segment && (
                   <p className="working">
-                    Your score of{' '}
-                    <strong className="tabular">{formatNumber(data.steps[3].result, 2)}</strong> sits{' '}
+                    Your adjusted 1RM of{' '}
+                    <strong className="tabular">{formatKg(data.steps[2].result_kg)}</strong> sits{' '}
                     <strong className="tabular">
                       {formatNumber(data.steps[4].segment.fraction * 100, 1)}%
                     </strong>{' '}
-                    of the way from {data.steps[4].segment.from.level} (index{' '}
-                    {data.steps[4].segment.from.index}) to {data.steps[4].segment.to.level} (index{' '}
+                    of the way from {data.steps[4].segment.from.level} (
+                    {formatKg(data.steps[4].segment.from.kg)}, score {data.steps[4].segment.from.index})
+                    to {data.steps[4].segment.to.level} ({formatKg(data.steps[4].segment.to.kg)}, score{' '}
                     {data.steps[4].segment.to.index}).
                   </p>
                 )}
 
                 <dl className="figure-row">
-                  <Figure
-                    label="Strength index"
-                    value={`${formatNumber(data.steps[4].result, 1)} / 1000`}
-                  />
+                  <Figure label="Score" value={`${formatNumber(data.steps[4].result, 1)} / 1000`} />
                 </dl>
               </StepCard>
 

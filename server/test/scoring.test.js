@@ -2,26 +2,22 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  DOTS_BODYWEIGHT_BOUNDS,
   FOSTER_COEFFICIENTS,
   MCCULLOCH_COEFFICIENTS,
-  REFERENCE_BODYWEIGHT_KG,
-  dotsPolynomial,
+  STANDARDS,
 } from '../lib/scoring-config.js';
-import { DOTS_THRESHOLDS } from '../lib/thresholds.js';
-import { computeThresholds } from '../scripts/calibrate.js';
 import {
   ageCoefficientForAge,
   ageOn,
   brzycki,
-  clampBodyweight,
-  dotsPoints,
   effectiveLoad,
   epley,
   estimate1rm,
+  estimate1rmBodyweight,
   indexToRank,
-  scoreForIndex,
+  kgForIndex,
   scoreLift,
+  standardsFor,
   strengthIndex,
 } from '../lib/scoring.js';
 
@@ -35,46 +31,67 @@ function closeTo(actual, expected, tolerance, label = '') {
 const PULLUP = { code: 'pullup', type: 'bodyweight', bwFactor: 1 };
 const BENCH = { code: 'bench', type: 'external', bwFactor: 0 };
 
-describe('DOTS polynomial', () => {
-  it('reproduces the published control values', () => {
-    closeTo(dotsPolynomial('M', 90), 773.27, 0.01, 'P_men(90)');
-    closeTo(dotsPolynomial('F', 65), 473.72, 0.01, 'P_women(65)');
-    closeTo(dotsPolynomial('F', 50), 399.04, 0.01, 'P_women(50)');
+const PUSHUP = { code: 'pushup', type: 'bodyweight', bwFactor: 0.64 };
+
+describe('standards at the lifter\'s bodyweight', () => {
+  it('returns the published table values exactly on a listed bodyweight', () => {
+    // Strength Level, men's bench at 90 kg: 65 / 85 / 109 / 137 / 165.
+    assert.deepEqual(standardsFor('M', 'bench', 90).anchorsKg.slice(0, 5), [65, 85, 109, 137, 165]);
   });
 
-  it('scores a heavier lifter lower for the same lift', () => {
-    const light = dotsPoints(150, 'M', 70);
-    const heavy = dotsPoints(150, 'M', 110);
-    assert.ok(light > heavy, 'bodyweight normalisation should favour the lighter lifter');
+  it('interpolates between two listed bodyweights', () => {
+    // Halfway between 70 kg (116) and 80 kg (132) on the men's squat.
+    closeTo(standardsFor('M', 'squat', 75).anchorsKg[2], 124, 1e-9, 'Intermediate squat at 75 kg');
   });
-});
 
-describe('bodyweight clamping', () => {
-  it('clamps below and above the fitted range instead of extrapolating', () => {
-    for (const sex of ['M', 'F']) {
-      const { min, max } = DOTS_BODYWEIGHT_BOUNDS[sex];
-      assert.deepEqual(clampBodyweight(sex, min - 10), { value: min, clamped: true });
-      assert.deepEqual(clampBodyweight(sex, max + 10), { value: max, clamped: true });
-      assert.deepEqual(clampBodyweight(sex, min + 1), { value: min + 1, clamped: false });
+  it('asks more of a heavier lifter in kilograms, less per kilogram of bodyweight', () => {
+    const light = standardsFor('M', 'deadlift', 60).anchorsKg[2];
+    const heavy = standardsFor('M', 'deadlift', 110).anchorsKg[2];
+    assert.ok(heavy > light, 'more absolute weight for the heavier lifter');
+    assert.ok(heavy / 110 < light / 60, 'but a smaller multiple of bodyweight');
+  });
+
+  it('reads pull-up and dip standards as weight added to bodyweight', () => {
+    // Men at 70 kg: Intermediate pull-up is +31 kg, so 101 kg in total.
+    assert.equal(standardsFor('M', 'pullup', 70).anchorsKg[2], 101);
+  });
+
+  it('reads push-up standards as reps, converted with Epley at the bodyweight share', () => {
+    // Men at 70 kg: Intermediate is 40 strict push-ups.
+    const base = 0.64 * 70;
+    closeTo(standardsFor('M', 'pushup', 70, 0.64).anchorsKg[2], epley(base, 40), 1e-9, '40 push-ups');
+  });
+
+  it('rises strictly across the six anchors for every table and bodyweight', () => {
+    for (const [sex, byExercise] of Object.entries(STANDARDS)) {
+      for (const code of Object.keys(byExercise)) {
+        for (let bw = 35; bw <= 160; bw += 5) {
+          const { anchorsKg } = standardsFor(sex, code, bw, code === 'pushup' ? 0.64 : 1);
+          assert.equal(anchorsKg.length, 6, `${sex}/${code}`);
+          for (let i = 1; i < anchorsKg.length; i += 1) {
+            assert.ok(anchorsKg[i] > anchorsKg[i - 1], `${sex}/${code} at ${bw} kg, anchor ${i}`);
+          }
+        }
+      }
     }
   });
 
-  it('uses the clamped bodyweight in the score', () => {
-    assert.equal(dotsPoints(100, 'M', 20), dotsPoints(100, 'M', 40));
-    assert.equal(dotsPoints(100, 'F', 300), dotsPoints(100, 'F', 150));
-  });
-
-  it('flags a clamped bodyweight on a scored lift', () => {
+  it('flags a bodyweight outside the published tables, and still scores it', () => {
     const result = scoreLift({
       sex: 'M',
       birthDate: '1996-01-01',
       performedAt: '2026-06-15',
-      bodyweightKg: 250,
+      bodyweightKg: 150,
       exercise: BENCH,
       weightKg: 100,
       reps: 1,
     });
-    assert.ok(result.flags.some((f) => f.code === 'BODYWEIGHT_CLAMPED'));
+    assert.equal(result.ranked, true);
+    assert.ok(result.flags.some((f) => f.code === 'BODYWEIGHT_OUTSIDE_TABLE'));
+  });
+
+  it('returns null for an exercise with no published standards', () => {
+    assert.equal(standardsFor('M', 'not-an-exercise', 80), null);
   });
 });
 
@@ -111,7 +128,13 @@ describe('estimated 1RM', () => {
     assert.throws(() => estimate1rm(100, 2.5), RangeError);
   });
 
-  it('keeps a high-rep set in the history but out of the rank', () => {
+  it('uses Epley alone for bodyweight movements, up to 100 reps', () => {
+    closeTo(estimate1rmBodyweight(70, 14), epley(70, 14), 1e-9, '14 pull-ups');
+    closeTo(estimate1rmBodyweight(45, 60), epley(45, 60), 1e-9, '60 push-ups');
+    assert.equal(estimate1rmBodyweight(45, 101), null);
+  });
+
+  it('keeps a high-rep barbell set in the history but out of the rank', () => {
     const result = scoreLift({
       sex: 'M',
       birthDate: '1996-01-01',
@@ -216,53 +239,36 @@ describe('age coefficients', () => {
   });
 });
 
-describe('calibration', () => {
-  it('the committed thresholds file matches a fresh calibration', () => {
-    assert.deepEqual(computeThresholds(), DOTS_THRESHOLDS, 'run: npm run calibrate');
-  });
-
-  it('thresholds rise strictly across the six anchors', () => {
-    for (const [sex, byExercise] of Object.entries(DOTS_THRESHOLDS)) {
-      for (const [code, points] of Object.entries(byExercise)) {
-        assert.equal(points.length, 6, `${sex}/${code}`);
-        for (let i = 1; i < points.length; i += 1) {
-          assert.ok(points[i] > points[i - 1], `${sex}/${code} anchor ${i} must exceed anchor ${i - 1}`);
-        }
-      }
-    }
-  });
+describe('strength index', () => {
+  const anchors = standardsFor('M', 'squat', 90).anchorsKg;
 
   it('places an anchor exactly on its index', () => {
-    // The third anchor is Intermediate, worth 450 by definition.
-    const intermediate = DOTS_THRESHOLDS.M.squat[2];
-    closeTo(strengthIndex(intermediate, 'M', 'squat'), 450, 1e-9, 'Intermediate squat');
-    closeTo(strengthIndex(DOTS_THRESHOLDS.F.bench[4], 'F', 'bench'), 825, 1e-9, 'Elite bench');
+    closeTo(strengthIndex(anchors[2], anchors), 450, 1e-9, 'Intermediate');
+    closeTo(strengthIndex(anchors[4], anchors), 825, 1e-9, 'Elite');
   });
-});
 
-describe('strength index', () => {
-  it('rises monotonically with the score and caps at 1000', () => {
+  it('rises monotonically with the lift and caps at 1000', () => {
     let previous = -1;
-    for (let score = 0; score <= 400; score += 0.5) {
-      const index = strengthIndex(score, 'M', 'squat');
-      assert.ok(index >= previous, `index dropped at score ${score}`);
-      assert.ok(index <= 1000, `index exceeded 1000 at score ${score}`);
+    for (let kg = 0; kg <= 400; kg += 0.5) {
+      const index = strengthIndex(kg, anchors);
+      assert.ok(index >= previous, `index dropped at ${kg} kg`);
+      assert.ok(index <= 1000, `index exceeded 1000 at ${kg} kg`);
       previous = index;
     }
-    assert.equal(strengthIndex(10_000, 'M', 'squat'), 1000);
-    assert.equal(strengthIndex(0, 'M', 'squat'), 0);
-    assert.equal(strengthIndex(-5, 'M', 'squat'), 0);
+    assert.equal(strengthIndex(10_000, anchors), 1000);
+    assert.equal(strengthIndex(0, anchors), 0);
+    assert.equal(strengthIndex(-5, anchors), 0);
   });
 
   it('inverts exactly', () => {
+    const deadlift = standardsFor('M', 'deadlift', 80).anchorsKg;
     for (const index of [1, 100, 190.6, 250, 402, 459.3, 650, 825, 999]) {
-      const score = scoreForIndex(index, 'M', 'deadlift');
-      closeTo(strengthIndex(score, 'M', 'deadlift'), index, 1e-6, `round trip at ${index}`);
+      closeTo(strengthIndex(kgForIndex(index, deadlift), deadlift), index, 1e-6, `round trip at ${index}`);
     }
   });
 
-  it('returns null for an exercise with no calibrated standards', () => {
-    assert.equal(strengthIndex(100, 'M', 'not-an-exercise'), null);
+  it('returns null without standards', () => {
+    assert.equal(strengthIndex(100, null), null);
   });
 });
 
@@ -304,9 +310,6 @@ describe('ranks and divisions', () => {
 });
 
 describe('reference cases', () => {
-  // Case 1. The specification quoted index ~430 and Gold IV; the formulas it
-  // also specifies produce 459.3, which is Gold V. e1RM and DOTS match it
-  // exactly, so the divergence is in the interpolation arithmetic alone.
   it('man, 25, 90 kg, bench 100 kg x 5 -> Gold V', () => {
     const result = scoreLift({
       sex: 'M',
@@ -319,13 +322,13 @@ describe('reference cases', () => {
     });
     assert.equal(result.age, 25);
     closeTo(result.e1rmKg, 114.58, 0.01, 'e1RM');
-    closeTo(result.dotsPoints, 74.09, 0.01, 'DOTS');
     assert.equal(result.ageCoefficient, 1);
-    closeTo(result.strengthIndex, 459.3, 0.1, 'index');
+    // 114.58 kg sits between Intermediate (109) and Advanced (137) at 90 kg.
+    closeTo(result.strengthIndex, 489.9, 0.1, 'index');
     assert.equal(result.rank.label, 'Gold V');
   });
 
-  it('woman, 20, 50 kg, one strict pull-up -> Bronze II', () => {
+  it('woman, 20, 50 kg, one strict pull-up -> Silver III', () => {
     const result = scoreLift({
       sex: 'F',
       birthDate: '2006-01-01',
@@ -337,15 +340,12 @@ describe('reference cases', () => {
     });
     assert.equal(result.age, 20);
     assert.equal(result.effectiveLoadKg, 50);
-    closeTo(result.dotsPoints, 62.65, 0.01, 'DOTS');
     assert.equal(result.ageCoefficient, 1.03);
-    closeTo(result.adjustedScore, 64.53, 0.01, 'age-adjusted');
-    closeTo(result.strengthIndex, 190.6, 0.1, 'index');
-    assert.equal(result.rank.label, 'Bronze II');
+    closeTo(result.adjustedE1rmKg, 51.5, 0.01, 'age-adjusted');
+    closeTo(result.strengthIndex, 341.7, 0.1, 'index');
+    assert.equal(result.rank.label, 'Silver III');
   });
 
-  // Case 3. The specification quoted index ~400, which is right, but labelled
-  // it Silver I; Silver I begins at 410, so 402.0 is Silver II.
   it('man, 60, 90 kg, one strict pull-up -> Silver II', () => {
     const result = scoreLift({
       sex: 'M',
@@ -358,21 +358,50 @@ describe('reference cases', () => {
     });
     assert.equal(result.age, 60);
     assert.equal(result.effectiveLoadKg, 90);
-    closeTo(result.dotsPoints, 58.19, 0.01, 'DOTS');
     assert.equal(result.ageCoefficient, 1.34);
-    closeTo(result.adjustedScore, 77.98, 0.01, 'age-adjusted');
-    closeTo(result.strengthIndex, 402.0, 0.1, 'index');
+    closeTo(result.adjustedE1rmKg, 120.6, 0.01, 'age-adjusted');
+    closeTo(result.strengthIndex, 406.0, 0.1, 'index');
     assert.equal(result.rank.label, 'Silver II');
+  });
+
+  it('man, 25, 72 kg, push-ups with 20 kg x 10 -> Silver IV, not the top rank', () => {
+    // The case that exposed the old calibration, which made this world-class.
+    const result = scoreLift({
+      sex: 'M',
+      birthDate: '2001-01-01',
+      performedAt: '2026-06-15',
+      bodyweightKg: 72,
+      exercise: PUSHUP,
+      weightKg: 20,
+      reps: 10,
+    });
+    closeTo(result.effectiveLoadKg, 66.08, 0.01, 'effective load');
+    closeTo(result.strengthIndex, 325.1, 0.1, 'index');
+    assert.equal(result.rank.label, 'Silver IV');
+  });
+
+  it('scores bodyweight push-ups like the published rep standards', () => {
+    const at = (reps) =>
+      scoreLift({
+        sex: 'M',
+        birthDate: '2001-01-01',
+        performedAt: '2026-06-15',
+        bodyweightKg: 70,
+        exercise: PUSHUP,
+        weightKg: 0,
+        reps,
+      }).strengthIndex;
+    // Men at 70 kg: Novice 20, Intermediate 40, Elite 89 push-ups.
+    closeTo(at(20), 250, 0.1, 'Novice');
+    closeTo(at(40), 450, 0.1, 'Intermediate');
+    closeTo(at(89), 825, 0.1, 'Elite');
   });
 
   it('rates the same apparent pull-up higher for the older, heavier lifter', () => {
     const common = { performedAt: '2026-06-15', exercise: PULLUP, weightKg: 0, reps: 1 };
     const youngWoman = scoreLift({ ...common, sex: 'F', birthDate: '2006-01-01', bodyweightKg: 50 });
     const olderMan = scoreLift({ ...common, sex: 'M', birthDate: '1966-01-01', bodyweightKg: 90 });
-    assert.ok(
-      olderMan.strengthIndex > youngWoman.strengthIndex,
-      'the whole point of the calibration',
-    );
+    assert.ok(olderMan.strengthIndex > youngWoman.strengthIndex);
   });
 });
 
@@ -393,6 +422,30 @@ describe('kilograms to the next division', () => {
     const atTarget = scoreLift({ ...base, weightKg: current.nextDivision.targetE1rmKg });
     closeTo(atTarget.strengthIndex, current.nextDivision.index, 0.2, 'index at the target load');
     assert.equal(atTarget.rank.label, current.nextDivision.label);
+  });
+
+  it('gives the strict reps at bodyweight for a bodyweight movement', () => {
+    const current = scoreLift({
+      sex: 'M',
+      birthDate: '1996-01-01',
+      performedAt: '2026-06-15',
+      bodyweightKg: 70,
+      exercise: PUSHUP,
+      weightKg: 0,
+      reps: 25,
+    });
+    const reps = current.nextDivision.bodyweightReps;
+    assert.ok(reps > 25, `the next division needs more than 25 reps, got ${reps}`);
+    const atTarget = scoreLift({
+      sex: 'M',
+      birthDate: '1996-01-01',
+      performedAt: '2026-06-15',
+      bodyweightKg: 70,
+      exercise: PUSHUP,
+      weightKg: 0,
+      reps,
+    });
+    assert.ok(atTarget.strengthIndex >= current.nextDivision.index);
   });
 
   it('works for a bodyweight lift, where the delta is added load', () => {
@@ -435,25 +488,23 @@ describe('kilograms to the next division', () => {
 });
 
 describe('the top is meant to be out of reach', () => {
-  it('needs a world-class total for the highest rank', () => {
-    const refBw = REFERENCE_BODYWEIGHT_KG.M;
-    const score = scoreForIndex(980, 'M', 'squat');
-    const kg = (score * dotsPolynomial('M', refBw)) / 500;
-    assert.ok(kg > 300, `entering the top rank should demand more than 300 kg, got ${kg}`);
+  it('needs a world-record squat for the highest rank', () => {
+    const kg = kgForIndex(980, standardsFor('M', 'squat', 90).anchorsKg);
+    assert.ok(kg > 320, `entering the top rank should demand more than 320 kg, got ${kg}`);
   });
 
-  it('gives the first rank up quickly', () => {
-    // An untrained man squatting 0.75x bodyweight is already on the board.
+  it('gives the first rank up at the beginner standard', () => {
+    // Strength Level's Beginner squat for a 90 kg man is 87 kg.
     const result = scoreLift({
       sex: 'M',
       birthDate: '1996-01-01',
       performedAt: '2026-06-15',
       bodyweightKg: 90,
       exercise: { code: 'squat', type: 'external', bwFactor: 0 },
-      weightKg: 67.5,
+      weightKg: 87,
       reps: 1,
     });
-    closeTo(result.strengthIndex, 100, 0.5, 'Untrained anchor');
+    closeTo(result.strengthIndex, 100, 0.5, 'Beginner anchor');
     assert.equal(result.rank.rank, 'Bronze');
   });
 });

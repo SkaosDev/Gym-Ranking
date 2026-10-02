@@ -69,6 +69,7 @@ function snakeNextDivision(next) {
     index: next.index,
     target_e1rm_kg: next.targetE1rmKg,
     kg_needed: next.kgNeeded,
+    bodyweight_reps: next.bodyweightReps,
   };
 }
 
@@ -98,10 +99,10 @@ export function scoreRow(user, row, resolveBodyweight) {
       counts_toward_rank: false,
       effective_load_kg: null,
       e1rm_kg: null,
-      dots_points: null,
       age: null,
       age_coefficient: null,
-      adjusted_score: null,
+      adjusted_e1rm_kg: null,
+      standards_kg: null,
       strength_index: null,
       rank: null,
       next_division: null,
@@ -141,10 +142,10 @@ export function scoreRow(user, row, resolveBodyweight) {
     counts_toward_rank: score.ranked && !base.needs_confirmation,
     effective_load_kg: score.effectiveLoadKg,
     e1rm_kg: score.e1rmKg,
-    dots_points: score.dotsPoints,
     age: score.age,
     age_coefficient: score.ageCoefficient,
-    adjusted_score: score.adjustedScore,
+    adjusted_e1rm_kg: score.adjustedE1rmKg,
+    standards_kg: score.standardsKg,
     strength_index: score.strengthIndex,
     rank: snakeRank(score.rank),
     next_division: snakeNextDivision(score.nextDivision),

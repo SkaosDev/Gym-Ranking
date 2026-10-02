@@ -195,7 +195,7 @@ export function publicProfile(viewer, username) {
     overall: ranks.overall.complete
       ? { index: ranks.overall.index, rank: ranks.overall.rank }
       : null,
-    // Ranks and indices only. Kilogram loads, estimated maxes, DOTS points and
+    // Ranks and indices only. Kilogram loads, estimated maxes, standards and
     // the bodyweight they were computed from all stay with the owner.
     exercises: ranks.exercises
       .filter((entry) => entry.has_data)

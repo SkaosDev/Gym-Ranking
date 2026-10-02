@@ -112,7 +112,8 @@ describe('creating a performance', () => {
     assert.equal(body.bodyweight_kg, 90);
     assert.equal(body.effective_load_kg, 100);
     assert.ok(Math.abs(body.e1rm_kg - 114.58) < 0.01, `e1RM ${body.e1rm_kg}`);
-    assert.ok(Math.abs(body.dots_points - 74.09) < 0.01, `DOTS ${body.dots_points}`);
+    assert.deepEqual(body.standards_kg.slice(0, 5), [65, 85, 109, 137, 165]);
+    assert.ok(Math.abs(body.strength_index - 489.9) < 0.1, `index ${body.strength_index}`);
     assert.equal(body.rank.label, 'Gold V');
     assert.equal(body.counts_toward_rank, true);
     assert.ok(body.next_division.kg_needed > 0);
@@ -507,14 +508,14 @@ describe('bodyweight as of the performance date', () => {
     assert.equal(after.json.bodyweight_kg, 95, 'the later set uses the later weight');
     assert.equal(before.json.effective_load_kg, 80);
     assert.equal(after.json.effective_load_kg, 95);
-    // The same apparent feat scores HIGHER at the heavier bodyweight, because
-    // P(bw) flattens out: DOTS does not assume strength scales linearly with
-    // mass, so hauling 95 kg up is worth more than hauling 80 kg up. This is
-    // the same mechanism that puts reference case 3 above reference case 2.
+    // Each set is judged against the standards of its own bodyweight, and the
+    // heavier lifter's standards are higher.
     assert.ok(
-      after.json.dots_points > before.json.dots_points,
-      `${after.json.dots_points} should exceed ${before.json.dots_points}`,
+      after.json.standards_kg[2] > before.json.standards_kg[2],
+      `${after.json.standards_kg[2]} should exceed ${before.json.standards_kg[2]}`,
     );
+    // Hauling 95 kg over the bar is still worth a little more than 80 kg.
+    assert.ok(after.json.strength_index > before.json.strength_index);
   });
 
   it('falls back to the earliest weigh-in for a set predating every weigh-in', async () => {
