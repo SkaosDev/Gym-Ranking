@@ -22,11 +22,20 @@ function Figure({ label, value, hint }) {
 
 function StepCard({ number, step, children }) {
   return (
-    <Card title={`Step ${number}. ${step.title}`} className="step-card">
-      {step.formula && <p className="formula">{step.formula}</p>}
-      {step.note && <p className="muted stat-note">{step.note}</p>}
-      {children}
-    </Card>
+    <section className="card step-card">
+      <span className="step-card__number" aria-hidden="true">
+        {number}
+      </span>
+      <div className="step-card__body">
+        <h2 className="card__title">
+          <span className="visually-hidden">Step {number}. </span>
+          {step.title}
+        </h2>
+        {step.formula && <p className="formula">{step.formula}</p>}
+        {step.note && <p className="muted stat-note">{step.note}</p>}
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -64,18 +73,14 @@ export default function RankExplained() {
       <div className="page-header">
         <div>
           <h1>How this rank is worked out</h1>
-          <p>
-            Every number below comes from a published formula, applied to one set of yours. Nothing
-            here is a black box.
-          </p>
+          <p>From the weight on the bar to your badge, step by step.</p>
         </div>
       </div>
 
       <AsyncView status={status} error={error} onRetry={load} loadingLabel="Working through the steps">
         {status === 'ready' && notFound && (
           <EmptyState icon="performances" title="No performance to explain yet">
-            <Link to="/performances">Log a set</Link> and this page shows every step from the bar to
-            the badge.
+            Log a set first, then come back here.
           </EmptyState>
         )}
 

@@ -5,17 +5,19 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
 import { onFriendsChanged } from '../lib/friendEvents.js';
 import Icon from './Icon.jsx';
+import { useLogSet } from './LogSet.jsx';
 import './Navbar.css';
 
 const LINKS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/performances', label: 'Performances', icon: 'performances' },
+  { to: '/performances', label: 'Workouts', icon: 'performances' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
 ];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { openLogSet } = useLogSet();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -91,15 +93,28 @@ export default function Navbar() {
 
           <ul className="navbar__account">
             <li>
+              <button
+                type="button"
+                className="button--primary navbar__cta"
+                onClick={() => {
+                  setMenuOpen(false);
+                  openLogSet();
+                }}
+              >
+                <Icon name="add" />
+                Log a set
+              </button>
+            </li>
+            <li>
               <NavLink to="/profile" className="navbar__link">
                 <Icon name="profile" fixedWidth />
                 {user.username}
               </NavLink>
             </li>
             <li>
-              <button type="button" className="navbar__logout button--quiet" onClick={handleLogout}>
+              <button type="button" className="navbar__logout button--quiet" onClick={handleLogout} aria-label="Log out" title="Log out">
                 <Icon name="logout" fixedWidth />
-                Log out
+                <span className="navbar__logout-label">Log out</span>
               </button>
             </li>
           </ul>

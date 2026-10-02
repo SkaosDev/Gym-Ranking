@@ -11,7 +11,7 @@ export default function RankBadge({ rank, size = 'md', showIndex = false }) {
 
   const style = {
     '--rank-color': rank.color,
-    '--rank-fill': rank.gradient ?? rank.color,
+    '--rank-fill': rank.color,
   };
 
   return (

@@ -22,6 +22,7 @@ import Card from '../components/Card.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import {
   ACCENT,
+  BRAND,
   GRID_STROKE,
   SERIES_COLORS,
   colorForExercise,
@@ -32,6 +33,7 @@ import {
 } from '../components/charts.jsx';
 import { api } from '../lib/api.js';
 import { formatDate, formatNumber } from '../lib/format.js';
+import { onPerformancesChanged } from '../lib/performanceEvents.js';
 
 const CHART_HEIGHT = 260;
 
@@ -62,6 +64,7 @@ export default function Progress() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => onPerformancesChanged(load), [load]);
 
   const codes = useMemo(() => data?.e1rm.series.map((s) => s.code) ?? [], [data]);
 
@@ -114,7 +117,7 @@ export default function Progress() {
       <div className="page-header">
         <div>
           <h1>Progress</h1>
-          <p>How your estimated maxes and your strength index have moved over time.</p>
+          <p>How your lifts have moved over time.</p>
         </div>
       </div>
 
@@ -126,8 +129,8 @@ export default function Progress() {
         isEmpty={Boolean(nothingLogged)}
         empty={
           <EmptyState icon="progress" title="No history to chart yet">
-            Charts need a few sets to say anything. <Link to="/performances">Log some training</Link>{' '}
-            and your progress appears here.
+            Log a few sets in <Link to="/performances">Workouts</Link> and your progress appears
+            here.
           </EmptyState>
         }
       >
@@ -155,7 +158,7 @@ export default function Progress() {
             <Card
               title="Estimated one-rep max"
               icon="progress"
-              subtitle="The best set of each training day, converted to a one-rep max."
+              subtitle="Best set of each day, as the max weight you could lift once."
               className="stack-bottom"
             >
               <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -184,12 +187,12 @@ export default function Progress() {
 
             {/* 2. Strength index against the rank thresholds ------------- */}
             <Card
-              title={`Strength index — ${indexSeries?.label ?? ''}`}
+              title={`Score over time — ${indexSeries?.label ?? ''}`}
               icon="record"
               subtitle={
                 selected === 'all'
-                  ? 'Showing the exercise with the most history. Pick one above to change it.'
-                  : 'Coloured lines are the rank thresholds.'
+                  ? 'Score out of 1000. Dashed lines are rank thresholds. Pick an exercise above.'
+                  : 'Score out of 1000. Dashed lines are rank thresholds.'
               }
               className="stack-bottom"
             >
@@ -222,7 +225,7 @@ export default function Progress() {
                       <Line
                         type="monotone"
                         dataKey="strength_index"
-                        name="Strength index"
+                        name="Score"
                         stroke={ACCENT}
                         strokeWidth={2}
                         dot={false}
@@ -243,26 +246,26 @@ export default function Progress() {
             <Card
               title="Where you are strong"
               icon="record"
-              subtitle="Current index per exercise, so an imbalance shows at a glance."
+              subtitle="Current score per exercise. A dent means a weak spot."
               className="stack-bottom"
             >
               <ResponsiveContainer width="100%" height={CHART_HEIGHT + 40}>
                 <RadarChart data={radarRows} outerRadius="72%">
                   <PolarGrid stroke={GRID_STROKE} />
-                  <PolarAngleAxis dataKey="label" tick={{ fill: '#96a0ac', fontSize: 12 }} />
+                  <PolarAngleAxis dataKey="label" tick={{ fill: '#5b6470', fontSize: 12 }} />
                   <PolarRadiusAxis
                     domain={[0, 1000]}
                     tickCount={5}
-                    tick={{ fill: '#6b7682', fontSize: 11 }}
+                    tick={{ fill: '#8a929c', fontSize: 11 }}
                     axisLine={false}
                   />
                   <Tooltip {...tooltipProps} labelFormatter={(label) => label} />
                   <Radar
-                    name="Strength index"
+                    name="Score"
                     dataKey="index"
-                    stroke={ACCENT}
-                    fill={ACCENT}
-                    fillOpacity={0.18}
+                    stroke={BRAND}
+                    fill={BRAND}
+                    fillOpacity={0.2}
                     strokeWidth={2}
                   />
                 </RadarChart>
@@ -271,9 +274,8 @@ export default function Progress() {
 
             {/* 4. Bodyweight and overall index --------------------------- */}
             <Card
-              title="Bodyweight and overall index"
+              title="Bodyweight and overall score"
               icon="bodyweight"
-              subtitle="Two panels on one timeline rather than two scales on one axis, so nothing appears to cross that did not."
             >
               <h3 className="chart-subtitle">Bodyweight</h3>
               <ResponsiveContainer width="100%" height={180}>
@@ -295,7 +297,7 @@ export default function Progress() {
                 </LineChart>
               </ResponsiveContainer>
 
-              <h3 className="chart-subtitle">Overall index</h3>
+              <h3 className="chart-subtitle">Overall score (out of 1000)</h3>
               {hasOverall ? (
                 <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={bodyweightRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -306,7 +308,7 @@ export default function Progress() {
                     <Line
                       type="monotone"
                       dataKey="overall_index"
-                      name="Overall index"
+                      name="Overall score"
                       stroke={ACCENT}
                       strokeWidth={2}
                       dot={false}
@@ -317,13 +319,12 @@ export default function Progress() {
                 </ResponsiveContainer>
               ) : (
                 <p className="muted">
-                  An overall index needs three of the five weighted exercises logged.
+                  Log three of the five main exercises to get an overall score.
                 </p>
               )}
 
               <p className="muted stat-note">
-                Scores are relative to bodyweight, so gaining weight can hold the index back even
-                while the bar gets heavier.
+                Scores are relative to bodyweight: gaining weight can hold your score back.
               </p>
             </Card>
           </>

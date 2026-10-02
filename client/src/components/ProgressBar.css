@@ -1,8 +1,7 @@
 .progress__track {
-  height: 8px;
+  height: 12px;
   border-radius: 999px;
   background: var(--surface-raised);
-  border: 1px solid var(--border);
   overflow: hidden;
 }
 

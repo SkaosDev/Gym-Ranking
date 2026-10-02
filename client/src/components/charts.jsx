@@ -8,16 +8,15 @@
  *
  * Two colour rules hold across every chart:
  *  - the eight rank colours are semantic and only ever mean ranks, which is
- *    why the strength-index curve is drawn in neutral chalk: the coloured
+ *    why the strength-index curve is drawn in the ink colour: the coloured
  *    lines behind it are rank thresholds, not other series;
  *  - series colours come from a fixed categorical order, never cycled, and
- *    were validated against this dark surface rather than chosen by eye
- *    (worst adjacent CVD delta-E 8.4, normal vision 19.3, all above 3:1).
+ *    read on the white chart surface (all above 3:1).
  */
 import { formatDateShort } from '../lib/format.js';
 
 export const SERIES_COLORS = [
-  '#3987e5', // blue
+  '#2f5bff', // blue
   '#d95926', // orange
   '#199e70', // aqua
   '#c98500', // yellow
@@ -32,12 +31,13 @@ export function colorForExercise(code, allCodes) {
   return SERIES_COLORS[position >= 0 ? position % SERIES_COLORS.length : 0];
 }
 
-export const GRID_STROKE = '#29313b';
-export const ACCENT = '#ece5d4';
+export const GRID_STROKE = '#e3e6ea';
+export const ACCENT = '#14171a';
+export const BRAND = '#2f5bff';
 
 const AXIS_BASE = {
-  stroke: '#3a444f',
-  tick: { fill: '#96a0ac', fontSize: 12 },
+  stroke: '#cfd4da',
+  tick: { fill: '#5b6470', fontSize: 12 },
   tickLine: false,
 };
 
@@ -50,20 +50,20 @@ export const dateAxisProps = {
 };
 
 /** Spread onto <YAxis />. */
-export const valueAxisProps = { ...AXIS_BASE, width: 48 };
+export const valueAxisProps = { ...AXIS_BASE, width: 60 };
 
 /** Spread onto <Tooltip />. */
 export const tooltipProps = {
   contentStyle: {
-    background: '#1d232b',
-    border: '1px solid #3a444f',
-    borderRadius: '6px',
+    background: '#14171a',
+    border: 0,
+    borderRadius: '8px',
     fontSize: '13px',
-    color: '#e4e8ec',
+    color: '#ffffff',
   },
-  labelStyle: { color: '#96a0ac', marginBottom: 4 },
-  itemStyle: { color: '#e4e8ec' },
-  cursor: { stroke: '#3a444f', strokeWidth: 1 },
+  labelStyle: { color: '#c4cad1', marginBottom: 4 },
+  itemStyle: { color: '#ffffff' },
+  cursor: { stroke: '#cfd4da', strokeWidth: 1 },
   labelFormatter: formatDateShort,
 };
 

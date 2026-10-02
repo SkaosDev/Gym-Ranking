@@ -5,7 +5,7 @@ import { api } from '../lib/api.js';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
-function initialState(exercises, performance) {
+function initialState(exercises, performance, defaultCode) {
   if (performance) {
     return {
       exercise_id: String(performance.exercise_id),
@@ -16,7 +16,7 @@ function initialState(exercises, performance) {
     };
   }
   return {
-    exercise_id: String(exercises[0]?.id ?? ''),
+    exercise_id: String((exercises.find((e) => e.code === defaultCode) ?? exercises[0])?.id ?? ''),
     weight_kg: '',
     reps: '',
     performed_at: TODAY,
@@ -25,8 +25,8 @@ function initialState(exercises, performance) {
 }
 
 /** Add or edit. The same fields either way; only the verb changes. */
-export default function PerformanceForm({ exercises, performance, onSaved, onCancel }) {
-  const [form, setForm] = useState(() => initialState(exercises, performance));
+export default function PerformanceForm({ exercises, performance, defaultCode, onSaved, onCancel }) {
+  const [form, setForm] = useState(() => initialState(exercises, performance, defaultCode));
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -110,7 +110,7 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
 
       <div className="field-row">
         <div className="field">
-          <label htmlFor="weight_kg">{isBodyweight ? 'Added load (kg)' : 'Load (kg)'}</label>
+          <label htmlFor="weight_kg">{isBodyweight ? 'Extra weight (kg)' : 'Weight (kg)'}</label>
           <input
             id="weight_kg"
             type="number"
@@ -124,8 +124,8 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
           />
           <span className="field-hint">
             {isBodyweight
-              ? 'Your bodyweight counts automatically. Use 0 for a strict rep, or a negative number for band assistance.'
-              : 'The load on the bar.'}
+              ? 'Bodyweight is added for you. 0 = no extra weight, negative = band assistance.'
+              : 'Total weight on the bar.'}
           </span>
           {errorFor('weight_kg')}
         </div>
@@ -142,7 +142,7 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
             value={form.reps}
             onChange={update('reps')}
           />
-          <span className="field-hint">Above 12 reps the set is kept but does not count.</span>
+          <span className="field-hint">1 to 12 reps count toward your rank.</span>
           {errorFor('reps')}
         </div>
       </div>
@@ -160,10 +160,10 @@ export default function PerformanceForm({ exercises, performance, onSaved, onCan
         {errorFor('notes')}
       </div>
 
-      <div className="row">
+      <div className="row form-actions">
         <button type="submit" className="button--primary" disabled={saving}>
           <Icon name="confirm" />
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving...' : performance ? 'Save changes' : 'Log set'}
         </button>
         <button type="button" onClick={onCancel} disabled={saving}>
           Cancel

@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import AsyncView from '../components/AsyncView.jsx';
-import Card from '../components/Card.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Icon from '../components/Icon.jsx';
+import { useLogSet } from '../components/LogSet.jsx';
+import Modal from '../components/Modal.jsx';
 import RankBadge from '../components/RankBadge.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { exerciseIcon } from '../components/icons.js';
 import { api } from '../lib/api.js';
-import { formatDate, formatIndex, formatKg, formatNumber } from '../lib/format.js';
+import { formatDate, formatIndex, formatKg } from '../lib/format.js';
+import { onPerformancesChanged } from '../lib/performanceEvents.js';
 import PerformanceForm from './PerformanceForm.jsx';
 
 function describeSet(row) {
@@ -25,6 +27,7 @@ function describeSet(row) {
 
 export default function Performances() {
   const toast = useToast();
+  const { openLogSet } = useLogSet();
 
   const [exercises, setExercises] = useState([]);
   const [data, setData] = useState(null);
@@ -35,7 +38,7 @@ export default function Performances() {
   const [sort, setSort] = useState('date_desc');
   const [page, setPage] = useState(1);
 
-  const [editing, setEditing] = useState(null); // null | 'new' | a performance
+  const [editing, setEditing] = useState(null); // null | a performance
   const [pendingDelete, setPendingDelete] = useState(null);
 
   const load = useCallback(async () => {
@@ -62,6 +65,7 @@ export default function Performances() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => onPerformancesChanged(load), [load]);
 
   async function afterChange(message) {
     setEditing(null);
@@ -74,7 +78,7 @@ export default function Performances() {
     const target = pendingDelete;
     try {
       await api.delete(`/performances/${target.id}`);
-      await afterChange('Performance deleted.');
+      await afterChange('Set deleted.');
     } catch (deleteError) {
       setPendingDelete(null);
       toast.show(deleteError.message, { tone: 'error' });
@@ -84,21 +88,16 @@ export default function Performances() {
   async function handleConfirm(row) {
     try {
       await api.post(`/performances/${row.id}/confirm`);
-      await afterChange('Performance confirmed. It counts toward your rank now.');
+      await afterChange('Set confirmed. It counts toward your rank now.');
     } catch (confirmError) {
       toast.show(confirmError.message, { tone: 'error' });
     }
   }
 
   const addButton = (
-    <button
-      type="button"
-      className="button--primary"
-      onClick={() => setEditing('new')}
-      disabled={exercises.length === 0}
-    >
+    <button type="button" className="button--primary" onClick={() => openLogSet()}>
       <Icon name="add" />
-      Log a performance
+      Log a set
     </button>
   );
 
@@ -106,27 +105,20 @@ export default function Performances() {
     <>
       <div className="page-header">
         <div>
-          <h1>Performances</h1>
-          <p>Every set you have logged, with the whole calculation behind its rank.</p>
+          <h1>Workouts</h1>
+          <p>Every set you have logged.</p>
         </div>
-        {!editing && addButton}
       </div>
 
       {editing && (
-        <Card
-          title={editing === 'new' ? 'Log a performance' : 'Edit performance'}
-          icon={editing === 'new' ? 'add' : 'edit'}
-          className="stack-bottom"
-        >
+        <Modal title="Edit set" onClose={() => setEditing(null)}>
           <PerformanceForm
             exercises={exercises}
-            performance={editing === 'new' ? null : editing}
+            performance={editing}
             onCancel={() => setEditing(null)}
-            onSaved={() =>
-              afterChange(editing === 'new' ? 'Performance logged.' : 'Performance updated.')
-            }
+            onSaved={() => afterChange('Set updated.')}
           />
-        </Card>
+        </Modal>
       )}
 
       <div className="filters">
@@ -169,16 +161,15 @@ export default function Performances() {
         status={status}
         error={error}
         onRetry={load}
-        loadingLabel="Loading your performances"
+        loadingLabel="Loading your sets"
         isEmpty={status === 'ready' && data.items.length === 0}
         empty={
           <EmptyState
             icon="performances"
-            title={filter ? 'Nothing logged for this exercise' : 'No performances yet'}
+            title={filter ? 'Nothing logged for this exercise' : 'No sets yet'}
             action={addButton}
           >
-            Log a set and GymRank works out your estimated one-rep max, your bodyweight-adjusted
-            score and the rank it earns.
+            Log your first set to get a rank.
           </EmptyState>
         }
       >
@@ -187,7 +178,7 @@ export default function Performances() {
             <div className="table-wrap">
               <table>
                 <caption>
-                  {data.total} performance{data.total === 1 ? '' : 's'}
+                  {data.total} set{data.total === 1 ? '' : 's'}
                   {filter ? ' for this exercise' : ''}
                 </caption>
                 <thead>
@@ -199,10 +190,7 @@ export default function Performances() {
                       Est. 1RM
                     </th>
                     <th scope="col" className="numeric">
-                      DOTS
-                    </th>
-                    <th scope="col" className="numeric">
-                      Index
+                      Score
                     </th>
                     <th scope="col">Rank</th>
                     <th scope="col">
@@ -222,15 +210,16 @@ export default function Performances() {
                       </td>
                       <td>{describeSet(row)}</td>
                       <td className="numeric">{formatKg(row.e1rm_kg)}</td>
-                      <td className="numeric">{formatNumber(row.dots_points)}</td>
-                      <td className="numeric">{formatIndex(row.strength_index)}</td>
+                      <td className="numeric">
+                        <strong>{formatIndex(row.strength_index)}</strong>
+                        <span className="muted"> / 1000</span>
+                      </td>
                       <td>
                         <RankBadge rank={row.rank} size="sm" />
                         {!row.counts_toward_rank && row.flags.length > 0 && (
-                          <span className="flag-note" title={row.flags[0].message}>
+                          <span className="flag-note">
                             <Icon name="warning" />
-                            <span className="visually-hidden">{row.flags[0].message}</span>
-                            <span aria-hidden="true">not counted</span>
+                            {row.flags[0].message}
                           </span>
                         )}
                       </td>
@@ -246,19 +235,17 @@ export default function Performances() {
                               Confirm
                             </button>
                           )}
-                          <Link
-                            to={`/rank-explained/${row.id}`}
-                            className="button--quiet button--icon button--small icon-link"
-                          >
-                            <Icon name="info" />
+                          <Link to={`/rank-explained/${row.id}`} className="explain-link">
+                            Why this rank?
                             <span className="visually-hidden">
-                              Explain the rank for {row.exercise_label} on{' '}
-                              {formatDate(row.performed_at)}
+                              {' '}
+                              ({row.exercise_label}, {formatDate(row.performed_at)})
                             </span>
                           </Link>
                           <button
                             type="button"
                             className="button--quiet button--icon button--small"
+                            title="Edit"
                             onClick={() => setEditing(row)}
                           >
                             <Icon name="edit" />
@@ -268,7 +255,8 @@ export default function Performances() {
                           </button>
                           <button
                             type="button"
-                            className="button--quiet button--icon button--small"
+                            className="button--quiet button--icon button--small row-delete"
+                            title="Delete"
                             onClick={() => setPendingDelete(row)}
                           >
                             <Icon name="delete" />
@@ -307,7 +295,7 @@ export default function Performances() {
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Delete this performance?"
+          title="Delete this set?"
           tone="danger"
           confirmLabel="Delete"
           cancelLabel="Keep it"

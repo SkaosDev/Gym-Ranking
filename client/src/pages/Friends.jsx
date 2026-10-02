@@ -7,6 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Icon from '../components/Icon.jsx';
 import RankBadge from '../components/RankBadge.jsx';
+import Spinner from '../components/Spinner.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { ApiError, api } from '../lib/api.js';
 import { announceFriendsChanged } from '../lib/friendEvents.js';
@@ -18,8 +19,10 @@ function PersonRow({ username, children, meta }) {
   return (
     <li className="person-row">
       <span className="person-row__who">
-        <Icon name="profile" fixedWidth />
-        <span>
+        <span className="avatar" aria-hidden="true">
+          {username.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="person-row__text">
           <Link to={`/u/${username}`}>{username}</Link>
           {meta && <span className="muted person-row__meta">{meta}</span>}
         </span>
@@ -130,10 +133,7 @@ export default function Friends() {
       <div className="page-header">
         <div>
           <h1>Friends</h1>
-          <p>
-            Follow a friend&rsquo;s ranks and progress. There is no leaderboard here, so friends are
-            listed alphabetically and never ranked against each other.
-          </p>
+          <p>See your friends&rsquo; ranks. Only ranks are shared, never your body data.</p>
         </div>
       </div>
 
@@ -148,10 +148,7 @@ export default function Friends() {
             placeholder="Start typing a username"
             onChange={(event) => setQuery(event.target.value)}
           />
-          <span className="field-hint">
-            At least {SEARCH_MIN} characters, and usernames only. Email addresses are never
-            searchable.
-          </span>
+          <span className="field-hint">Type at least {SEARCH_MIN} characters.</span>
         </div>
 
         {searchError && (
@@ -161,7 +158,12 @@ export default function Friends() {
           </div>
         )}
 
-        {searching && <p className="muted">Searching...</p>}
+        {searching && (
+          <p className="row muted">
+            <Spinner label="Searching" />
+            <span>Searching...</span>
+          </p>
+        )}
 
         {results && results.length === 0 && !searching && !searchError && (
           <p className="muted">Nobody found with that username.</p>
@@ -171,14 +173,14 @@ export default function Friends() {
           <ul className="person-list">
             {results.map((person) => (
               <PersonRow key={person.username} username={person.username}>
-                {person.friendship.status === 'accepted' && <span className="muted">Friends</span>}
+                {person.friendship.status === 'accepted' && <span className="tag tag--positive">Friends</span>}
                 {person.friendship.status === 'pending' && (
-                  <span className="muted">
+                  <span className="tag">
                     {person.friendship.direction === 'outgoing' ? 'Request sent' : 'Asked you'}
                   </span>
                 )}
                 {(person.friendship.status === 'none' || person.friendship.status === 'declined') && (
-                  <button type="button" className="button--small" onClick={() => sendRequest(person.username)}>
+                  <button type="button" className="button--primary button--small" onClick={() => sendRequest(person.username)}>
                     <Icon name="add" />
                     Add
                   </button>
@@ -192,55 +194,55 @@ export default function Friends() {
       <AsyncView status={status} error={error} onRetry={load} loadingLabel="Loading your friends">
         {status === 'ready' && (
           <>
-            {data.incoming.length > 0 && (
-              <Card
-                title={`Requests for you (${data.incoming.length})`}
-                icon="friends"
-                className="stack-bottom"
-              >
-                <ul className="person-list">
-                  {data.incoming.map((request) => (
-                    <PersonRow
-                      key={request.id}
-                      username={request.username}
-                      meta={` asked on ${formatDate(request.requested_at)}`}
-                    >
-                      <button type="button" className="button--primary button--small" onClick={() => accept(request)}>
-                        <Icon name="confirm" />
-                        Accept
-                      </button>
-                      <button type="button" className="button--small" onClick={() => decline(request)}>
-                        Decline
-                      </button>
-                    </PersonRow>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {data.outgoing.length > 0 && (
-              <Card title="Waiting on a reply" icon="friends" className="stack-bottom">
-                <ul className="person-list">
-                  {data.outgoing.map((request) => (
-                    <PersonRow
-                      key={request.id}
-                      username={request.username}
-                      meta={` asked on ${formatDate(request.requested_at)}`}
-                    >
-                      <button type="button" className="button--small" onClick={() => cancel(request)}>
-                        Cancel
-                      </button>
-                    </PersonRow>
-                  ))}
-                </ul>
+            {(data.incoming.length > 0 || data.outgoing.length > 0) && (
+              <Card title="Requests" icon="friends" className="stack-bottom">
+                {data.incoming.length > 0 && (
+                  <>
+                    <h3 className="list-heading">For you ({data.incoming.length})</h3>
+                    <ul className="person-list">
+                      {data.incoming.map((request) => (
+                        <PersonRow
+                          key={request.id}
+                          username={request.username}
+                          meta={`asked on ${formatDate(request.requested_at)}`}
+                        >
+                          <button type="button" className="button--primary button--small" onClick={() => accept(request)}>
+                            <Icon name="confirm" />
+                            Accept
+                          </button>
+                          <button type="button" className="button--small" onClick={() => decline(request)}>
+                            Decline
+                          </button>
+                        </PersonRow>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {data.outgoing.length > 0 && (
+                  <>
+                    <h3 className="list-heading">Sent, waiting for a reply ({data.outgoing.length})</h3>
+                    <ul className="person-list">
+                      {data.outgoing.map((request) => (
+                        <PersonRow
+                          key={request.id}
+                          username={request.username}
+                          meta={`sent on ${formatDate(request.requested_at)}`}
+                        >
+                          <button type="button" className="button--quiet button--small" onClick={() => cancel(request)}>
+                            Cancel
+                          </button>
+                        </PersonRow>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </Card>
             )}
 
             <Card title={`Friends (${data.friends.length})`} icon="friends">
               {data.friends.length === 0 ? (
                 <EmptyState icon="friends" title="No friends yet">
-                  Search for a username above to send the first request. Your bodyweight, loads and
-                  notes are never shared &mdash; only ranks.
+                  Search for a username above to send your first request.
                 </EmptyState>
               ) : (
                 <ul className="person-list">
@@ -248,18 +250,19 @@ export default function Friends() {
                     <PersonRow
                       key={friend.id}
                       username={friend.username}
-                      meta={` since ${formatDate(friend.friends_since)}`}
+                      meta={`friends since ${formatDate(friend.friends_since)}`}
                     >
                       {friend.overall ? (
                         <RankBadge rank={friend.overall.rank} size="sm" />
                       ) : (
-                        <span className="muted">
+                        <span className="tag">
                           {friend.ranks_visible ? 'No overall rank yet' : 'Ranks hidden'}
                         </span>
                       )}
                       <button
                         type="button"
-                        className="button--quiet button--icon button--small"
+                        className="button--quiet button--icon button--small row-delete"
+                        title={`Remove ${friend.username}`}
                         onClick={() => setPendingRemove(friend)}
                       >
                         <Icon name="delete" />

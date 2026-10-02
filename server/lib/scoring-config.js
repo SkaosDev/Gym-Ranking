@@ -138,21 +138,21 @@ export const ANCHOR_MULTIPLES = {
  * rank splits into five equal divisions, V through I, I being the highest.
  */
 export const RANKS = [
-  { name: 'Iron',     min: 0,   max: 99,   color: '#8b949e', meaning: 'untrained' },
-  { name: 'Bronze',   min: 100, max: 249,  color: '#cd7f32', meaning: 'beginner' },
-  { name: 'Silver',   min: 250, max: 449,  color: '#c0c0c0', meaning: 'around six months of consistent training' },
-  { name: 'Gold',     min: 450, max: 649,  color: '#ffd700', meaning: 'intermediate, one to two years' },
-  { name: 'Platinum', min: 650, max: 824,  color: '#6ee7d0', meaning: 'advanced, three to five years' },
-  { name: 'Diamond',  min: 825, max: 924,  color: '#7dd3fc', meaning: 'amateur elite' },
-  { name: 'Master',   min: 925, max: 979,  color: '#c084fc', meaning: 'national-level competitor' },
+  { name: 'Iron',     min: 0,   max: 99,   color: '#6b7280', meaning: 'untrained' },
+  { name: 'Bronze',   min: 100, max: 249,  color: '#b4652a', meaning: 'beginner' },
+  { name: 'Silver',   min: 250, max: 449,  color: '#8a94a3', meaning: 'around six months of consistent training' },
+  { name: 'Gold',     min: 450, max: 649,  color: '#d4a017', meaning: 'intermediate, one to two years' },
+  { name: 'Platinum', min: 650, max: 824,  color: '#14b8a6', meaning: 'advanced, three to five years' },
+  { name: 'Diamond',  min: 825, max: 924,  color: '#0ea5e9', meaning: 'amateur elite' },
+  { name: 'Master',   min: 925, max: 979,  color: '#8b5cf6', meaning: 'national-level competitor' },
   {
     name: 'Unkillable Demon King',
     // Only ever used where space genuinely forces it, never in headings or docs.
     abbreviation: 'UDK',
     min: 980,
     max: 1000,
-    color: '#ff3b30',
-    gradient: 'linear-gradient(90deg, #ff3b30 0%, #ffd700 100%)',
+    color: '#dc2626',
+    gradient: 'linear-gradient(90deg, #dc2626 0%, #d4a017 100%)',
     meaning: 'world-class',
   },
 ];

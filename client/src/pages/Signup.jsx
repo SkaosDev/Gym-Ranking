@@ -60,13 +60,16 @@ export default function Signup() {
 
   return (
     <>
-      <p className="auth-brand">
-        <Icon name="brand" /> GymRank
-      </p>
+      <div className="auth-head">
+        <p className="auth-brand">
+          <Icon name="brand" /> GymRank
+        </p>
+        <p className="auth-tagline">Find out how strong you really are.</p>
+      </div>
 
       <Card
         title="Create your account"
-        subtitle="Sex, date of birth and bodyweight calibrate your ranks. They stay private: friends only ever see ranks."
+        subtitle="Takes a minute. Your body data stays private."
       >
         {error && (
           <div className="notice notice--error" role="alert">
@@ -76,6 +79,10 @@ export default function Signup() {
         )}
 
         <form onSubmit={handleSubmit}>
+          <fieldset className="form-group">
+          <legend className="form-group__title">
+            <span className="form-group__step">1</span> Account
+          </legend>
           <div className="field">
             <label htmlFor="email">Email</label>
             <input
@@ -103,9 +110,7 @@ export default function Signup() {
               value={form.username}
               onChange={update('username')}
             />
-            <span className="field-hint">
-              3 to 20 characters: lowercase letters, digits, underscore or hyphen.
-            </span>
+            <span className="field-hint">3–20 characters: a-z, 0-9, _ or -.</span>
             {errorFor('username')}
           </div>
 
@@ -124,7 +129,13 @@ export default function Signup() {
             <span className="field-hint">At least 8 characters.</span>
             {errorFor('password')}
           </div>
+          </fieldset>
 
+          <fieldset className="form-group">
+          <legend className="form-group__title">
+            <span className="form-group__step">2</span> About you
+          </legend>
+          <p className="form-group__hint">Used only to calibrate your ranks. Friends never see it.</p>
           <div className="field-row">
             <div className="field">
               <label htmlFor="sex">Sex</label>
@@ -132,7 +143,6 @@ export default function Signup() {
                 <option value="M">Male</option>
                 <option value="F">Female</option>
               </select>
-              <span className="field-hint">Selects which standards apply.</span>
               {errorFor('sex')}
             </div>
 
@@ -185,8 +195,9 @@ export default function Signup() {
               {errorFor('weight_kg')}
             </div>
           </div>
+          </fieldset>
 
-          <button type="submit" className="button--primary" disabled={submitting}>
+          <button type="submit" className="button--primary button--block" disabled={submitting}>
             {submitting ? 'Creating your account...' : 'Create account'}
           </button>
         </form>

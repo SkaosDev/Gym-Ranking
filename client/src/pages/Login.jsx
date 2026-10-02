@@ -32,9 +32,12 @@ export default function Login() {
 
   return (
     <>
-      <p className="auth-brand">
-        <Icon name="brand" /> GymRank
-      </p>
+      <div className="auth-head">
+        <p className="auth-brand">
+          <Icon name="brand" /> GymRank
+        </p>
+        <p className="auth-tagline">Find out how strong you really are.</p>
+      </div>
 
       <Card title="Log in">
         {error && (
@@ -69,7 +72,7 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="button--primary" disabled={submitting}>
+          <button type="submit" className="button--primary button--block" disabled={submitting}>
             {submitting ? 'Logging in...' : 'Log in'}
           </button>
         </form>

@@ -1,10 +1,10 @@
 import './ProgressBar.css';
 
 /** Position within the current division, 0 to 100. */
-export default function ProgressBar({ value, color, gradient, label, caption }) {
+export default function ProgressBar({ value, color, label, caption }) {
   const clamped = Math.min(100, Math.max(0, value ?? 0));
   const style = {
-    '--progress-fill': gradient ?? color ?? 'var(--accent)',
+    '--progress-fill': color ?? 'var(--accent)',
     '--progress-value': `${clamped}%`,
   };
 

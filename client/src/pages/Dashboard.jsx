@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom';
 
 import AsyncView from '../components/AsyncView.jsx';
 import Card from '../components/Card.jsx';
-import EmptyState from '../components/EmptyState.jsx';
 import Icon from '../components/Icon.jsx';
+import { useLogSet } from '../components/LogSet.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 import RankBadge from '../components/RankBadge.jsx';
 import { exerciseIcon } from '../components/icons.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
 import { formatIndex, formatKg, formatNumber } from '../lib/format.js';
+import { onPerformancesChanged } from '../lib/performanceEvents.js';
 
 /** The sentence that makes the app engaging is this one, not the badge. */
 function NextDivisionLine({ entry }) {
@@ -25,25 +26,50 @@ function NextDivisionLine({ entry }) {
   );
 }
 
+function LogButton({ code, label = 'Log', variant = 'quiet', iconOnly = false }) {
+  const { openLogSet } = useLogSet();
+  return (
+    <button
+      type="button"
+      className={`button--small button--${variant} ${iconOnly ? 'button--icon' : ''}`}
+      title={iconOnly ? 'Log a set' : undefined}
+      onClick={() => openLogSet(code)}
+    >
+      <Icon name="add" />
+      {iconOnly ? <span className="visually-hidden">Log a set</span> : label}
+    </button>
+  );
+}
+
 function ExerciseCard({ entry }) {
   const { exercise, rank } = entry;
 
   if (!entry.has_data) {
     return (
-      <Card title={exercise.label} faIcon={exerciseIcon(exercise.code)}>
-        <RankBadge rank={null} />
-        <p className="muted stat-note">
-          No set logged yet. <Link to="/performances">Log one</Link> to get a rank.
-        </p>
+      <Card
+        title={exercise.label}
+        faIcon={exerciseIcon(exercise.code)}
+        className="exercise-card exercise-card--empty"
+      >
+        <div className="row exercise-card__top">
+          <RankBadge rank={null} />
+          <LogButton code={exercise.code} label="Log a set" variant="soft" />
+        </div>
       </Card>
     );
   }
 
   return (
-    <Card title={exercise.label} faIcon={exerciseIcon(exercise.code)} accent={rank.color}>
+    <Card
+      title={exercise.label}
+      faIcon={exerciseIcon(exercise.code)}
+      accent={rank.color}
+      className="exercise-card"
+      actions={<LogButton code={exercise.code} iconOnly />}
+    >
       <div className="row exercise-card__top">
         <RankBadge rank={rank} />
-        <span className="muted tabular exercise-card__index">
+        <span className="tabular exercise-card__index">
           {formatIndex(entry.effective_index)}
           <span className="muted"> / 1000</span>
         </span>
@@ -52,7 +78,6 @@ function ExerciseCard({ entry }) {
       <ProgressBar
         value={rank.within_division_pct}
         color={rank.color}
-        gradient={rank.gradient}
         label={`Progress through ${rank.label}`}
       />
 
@@ -92,6 +117,7 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => onPerformancesChanged(load), [load]);
 
   const overall = ranks?.overall;
 
@@ -99,10 +125,9 @@ export default function Dashboard() {
     <>
       <div className="page-header">
         <div>
-          <h1>Welcome back, {user.username}</h1>
+          <h1>Hi, {user.username}</h1>
           <p>
-            Ranks are absolute: they depend on your sex, bodyweight and age, never on anybody
-            else&rsquo;s results.
+            Your strength ranks. <Link to="/rank-explained">How ranks work &rarr;</Link>
           </p>
         </div>
       </div>
@@ -111,52 +136,79 @@ export default function Dashboard() {
         {status === 'ready' && (
           <>
             {overall.complete ? (
-              <Card
-                className="overall stack-bottom"
-                accent={overall.rank.color}
-                title="Overall rank"
-                icon="record"
-                actions={
-                  <Link to="/rank-explained" className="card__link">
-                    How is this worked out?
-                  </Link>
-                }
+              <section
+                className="hero"
+                style={{ '--hero-color': overall.rank.color }}
+                aria-labelledby="overall-title"
               >
-                <div className="overall__headline">
+                <div className="hero__main">
+                  <p className="hero__eyebrow" id="overall-title">
+                    Overall rank
+                  </p>
                   <RankBadge rank={overall.rank} size="lg" />
-                  <span className="overall__index tabular">
-                    {formatIndex(overall.index)}
-                    <span className="muted"> / 1000</span>
-                  </span>
+                  <p className="hero__meaning">{overall.rank.meaning}</p>
                 </div>
-
-                <ProgressBar
-                  value={overall.rank.within_division_pct}
-                  color={overall.rank.color}
-                  gradient={overall.rank.gradient}
-                  label={`Progress through ${overall.rank.label}`}
-                  caption={
-                    overall.rank.next_division
-                      ? `${formatNumber(overall.rank.next_division.index_needed, 0)} index points to ${overall.rank.next_division.label}.`
-                      : 'You are at the top of the scale.'
-                  }
-                />
-
-                <p className="muted stat-note">
-                  Weighted mean of {overall.contributions.map((c) => c.label).join(', ')}.
-                </p>
-              </Card>
+                <div className="hero__score">
+                  <span className="hero__number tabular">{formatIndex(overall.index)}</span>
+                  <span className="hero__max">/ 1000</span>
+                </div>
+                <div className="hero__progress">
+                  <ProgressBar
+                    value={overall.rank.within_division_pct}
+                    color={overall.rank.color}
+                    label={`Progress through ${overall.rank.label}`}
+                    caption={
+                      overall.rank.next_division ? (
+                        <>
+                          <strong className="tabular">
+                            {formatNumber(overall.rank.next_division.index_needed, 0)} pts
+                          </strong>{' '}
+                          to {overall.rank.next_division.label}
+                        </>
+                      ) : (
+                        'You are at the top of the scale.'
+                      )
+                    }
+                  />
+                </div>
+              </section>
             ) : (
-              <Card className="stack-bottom" title="Overall rank" icon="record">
-                <EmptyState
-                  icon="info"
-                  title={`${overall.exercises_with_data} of ${overall.required_exercises} exercises logged`}
-                >
-                  An overall rank needs at least {overall.required_exercises} of the{' '}
-                  {overall.weighted_exercises} weighted exercises. Still to log:{' '}
-                  {overall.missing.map((m) => m.label).join(', ')}.
-                </EmptyState>
-              </Card>
+              <section className="hero hero--setup" aria-labelledby="setup-title">
+                <div className="hero__main">
+                  <p className="hero__eyebrow">Overall rank</p>
+                  <h2 id="setup-title" className="hero__title">
+                    Log {overall.required_exercises - overall.exercises_with_data} more exercise
+                    {overall.required_exercises - overall.exercises_with_data === 1 ? '' : 's'} to
+                    unlock it
+                  </h2>
+                  <ProgressBar
+                    value={(overall.exercises_with_data / overall.required_exercises) * 100}
+                    label="Exercises logged"
+                    caption={`${overall.exercises_with_data} of ${overall.required_exercises} done`}
+                  />
+                </div>
+                <ul className="checklist">
+                  {ranks.exercises
+                    .filter((entry) => entry.exercise.global_weight > 0)
+                    .map((entry) => (
+                      <li
+                        key={entry.exercise.code}
+                        className={`checklist__item ${entry.has_data ? 'is-done' : ''}`}
+                      >
+                        <span className="checklist__mark" aria-hidden="true">
+                          {entry.has_data && <Icon name="confirm" />}
+                        </span>
+                        <span className="checklist__label">
+                          {entry.exercise.label}
+                          <span className="visually-hidden">
+                            {entry.has_data ? ' (done)' : ' (to do)'}
+                          </span>
+                        </span>
+                        {!entry.has_data && <LogButton code={entry.exercise.code} variant="soft" />}
+                      </li>
+                    ))}
+                </ul>
+              </section>
             )}
 
             <h2 className="section-heading">By exercise</h2>

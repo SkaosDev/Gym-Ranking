@@ -2,23 +2,21 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2) var(--space-1) 0;
-  border: 1px solid color-mix(in srgb, var(--rank-color) 35%, transparent);
+  padding: var(--space-1) 10px;
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--rank-color) 10%, transparent);
+  background: color-mix(in srgb, var(--rank-color) 16%, white);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
-  overflow: hidden;
 }
 
-/* A loaded-plate edge rather than a fully saturated fill, which keeps gold
-   and silver legible and lets the Demon King gradient read as a gradient. */
+/* A solid square of the rank colour: the badge's one flat mark. */
 .rank-badge__bar {
-  width: 4px;
-  align-self: stretch;
-  background: var(--rank-fill);
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--rank-color);
 }
 
 .rank-badge__name {
@@ -26,25 +24,28 @@
 }
 
 .rank-badge__division {
-  color: var(--rank-color);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
 .rank-badge__index {
-  color: var(--text-faint);
-  font-weight: 500;
-  border-left: 1px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 600;
+  border-left: 1px solid color-mix(in srgb, var(--rank-color) 40%, white);
   padding-left: var(--space-2);
 }
 
 .rank-badge--lg {
-  font-size: var(--text-lg);
-  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+  font-size: var(--text-xl);
+  gap: 12px;
+  padding: 10px var(--space-3);
   border-radius: var(--radius-lg);
 }
 
 .rank-badge--lg .rank-badge__bar {
-  width: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
 }
 
 .rank-badge--sm {
@@ -53,9 +54,10 @@
 
 .rank-badge--unranked {
   display: inline-flex;
-  padding: var(--space-1) var(--space-2);
-  border: 1px dashed var(--border-strong);
+  padding: var(--space-1) 10px;
   border-radius: var(--radius);
-  color: var(--text-faint);
+  background: var(--surface-raised);
+  color: var(--text-muted);
   font-size: var(--text-sm);
+  font-weight: 600;
 }

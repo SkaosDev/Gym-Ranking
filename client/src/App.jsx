@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 
 import GuestRoute from './components/GuestRoute.jsx';
+import { LogSetProvider } from './components/LogSet.jsx';
 import Navbar from './components/Navbar.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { ToastProvider } from './components/Toast.jsx';
@@ -16,9 +17,7 @@ import RankExplained from './pages/RankExplained.jsx';
 import Progress from './pages/Progress.jsx';
 import Signup from './pages/Signup.jsx';
 
-const DISCLAIMER =
-  'Estimates are for information only, based on population-level statistical formulas. ' +
-  'This is not medical advice and not a training program.';
+const DISCLAIMER = 'Statistical estimates for information only. Not medical advice or a training program.';
 
 function Footer() {
   return (
@@ -31,7 +30,7 @@ function Footer() {
 /** Signed in: fixed navbar above every page. */
 function AppLayout() {
   return (
-    <>
+    <LogSetProvider>
       <Navbar />
       <div className="app-body">
         <main className="page">
@@ -39,7 +38,7 @@ function AppLayout() {
         </main>
         <Footer />
       </div>
-    </>
+    </LogSetProvider>
   );
 }
 

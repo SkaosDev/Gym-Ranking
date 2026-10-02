@@ -7,7 +7,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong);
+  border: 2px solid var(--surface-raised);
   border-top-color: var(--accent);
   animation: spinner-turn 0.7s linear infinite;
 }
