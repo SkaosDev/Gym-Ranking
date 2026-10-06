@@ -72,21 +72,25 @@ plausible training: 13 weigh-ins and 91 sets, bodyweight climbing 78 → 83 kg a
 the overall index 251 → 452. Re-running it recreates that one account and
 touches nothing else.
 
-### The two friend accounts
+### The four friend accounts
 
-The demo database also holds two accounts that are friends with each other,
-each with six months of training, so the friends page and the public profile
-have something to compare:
+The demo database also holds four accounts that are all friends with each
+other, each with six months of training, so the leaderboard, the friends page
+and the public profile have something to compare:
 
 | Account | Email / password | Training | Overall rank |
 |---|---|---|---|
-| **alex** | `alex@gymrank.local` / `alex-password` | Upper/lower split, 4 days a week (~3.6 sessions a week) | Gold II |
-| **lucas** | `lucas@gymrank.local` / `lucas-password` | Full body, 3 days a week (~2.6 sessions a week) | Gold III |
+| **alex** | `alex@gymrank.local` / `alex-password` | Upper/lower split, 4 days a week (~3.6 sessions a week) | Gold I |
+| **lucas** | `lucas@gymrank.local` / `lucas-password` | Full body, 3 days a week (~2.6 sessions a week) | Gold II |
+| **sam** | `sam@gymrank.local` / `sam-password` | 5 days a week (~4.7 sessions a week), years of training | Diamond IV |
+| **noah** | `noah@gymrank.local` / `noah-password` | Beginner, 2 days a week when possible (~1.3 sessions a week) | Silver IV |
 
-Alex is slightly the stronger of the two. Lucas, being lighter, edges just
-ahead on the squat once bodyweight is accounted for. Both progress steadily:
-each lift is trained with one fixed scheme and the working weight only goes
-up, so the charts climb rather than zigzag.
+Alex is slightly stronger than Lucas, one division ahead overall. Sam is in
+a different league: an experienced lifter two ranks above both, gaining more
+slowly from a much higher base. Noah started recently and trains irregularly:
+well below the others, but with the fastest gains in relative terms. All four
+progress steadily: each lift is trained with one fixed scheme and the working
+weight only goes up, so the charts climb rather than zigzag.
 
 The database file is git-ignored, so these accounts exist only in the copy
 they were created in.
