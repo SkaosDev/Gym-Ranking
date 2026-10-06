@@ -1,0 +1,87 @@
+.activity {
+  --cell: 12px;
+  --cell-gap: 3px;
+}
+
+/* A year does not fit on a phone: scroll sideways, newest weeks in view. */
+.activity__scroll {
+  overflow-x: auto;
+  direction: rtl;
+  padding-bottom: var(--space-1);
+}
+
+.activity__grid {
+  direction: ltr;
+  display: grid;
+  /* One grid for labels and squares, so the day labels line up with rows. */
+  grid-auto-flow: column;
+  grid-template-columns: auto repeat(53, minmax(0, 1fr));
+  grid-template-rows: 16px repeat(7, auto);
+  gap: var(--cell-gap);
+  /* Fills the card; below this width the container scrolls instead. */
+  min-width: calc(53 * (var(--cell) + var(--cell-gap)) + 2.5rem);
+}
+
+.activity__week,
+.activity__days {
+  display: contents;
+}
+
+/* Squares grow with the card's width. */
+.activity__week .activity__cell {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.activity__days span {
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-1);
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+}
+
+.activity__month {
+  font-size: 0.6875rem;
+  line-height: 16px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  width: 0;
+  overflow: visible;
+}
+
+.activity__cell {
+  display: block;
+  width: var(--cell);
+  height: var(--cell);
+  border-radius: 3px;
+  background: var(--surface-raised);
+}
+
+.activity__cell--1 { background: color-mix(in srgb, var(--accent) 28%, white); }
+.activity__cell--2 { background: color-mix(in srgb, var(--accent) 52%, white); }
+.activity__cell--3 { background: color-mix(in srgb, var(--accent) 76%, white); }
+.activity__cell--4 { background: var(--accent); }
+
+.activity__cell--future {
+  background: transparent;
+}
+
+.activity__legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cell-gap);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.activity__legend span:first-child {
+  margin-right: var(--space-1);
+}
+
+.activity__legend span:last-child {
+  margin-left: var(--space-1);
+}

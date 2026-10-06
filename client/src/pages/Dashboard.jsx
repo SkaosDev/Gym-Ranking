@@ -1,38 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import ActivityGrid from '../components/ActivityGrid.jsx';
 import AsyncView from '../components/AsyncView.jsx';
 import Card from '../components/Card.jsx';
 import Icon from '../components/Icon.jsx';
 import { useLogSet } from '../components/LogSet.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 import RankBadge from '../components/RankBadge.jsx';
-import { exerciseIcon } from '../components/icons.js';
+import RankLineChart from '../components/RankLineChart.jsx';
+import { ExerciseList, Leaderboard, SummaryTiles } from '../components/dashboard.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.js';
-import { formatIndex, formatKg, formatNumber } from '../lib/format.js';
+import { formatKg } from '../lib/format.js';
 import { onPerformancesChanged } from '../lib/performanceEvents.js';
-
-/** The sentence that makes the app engaging is this one, not the badge. */
-function NextDivisionLine({ entry }) {
-  const next = entry.next_division;
-  if (!next) {
-    return <p className="next-line next-line--max">Nothing left above this. That is the ceiling.</p>;
-  }
-  // Push-ups and friends read better as a rep target than as kilograms.
-  if (entry.exercise.type === 'bodyweight' && next.bodyweight_reps) {
-    return (
-      <p className="next-line">
-        <strong className="tabular">{next.bodyweight_reps} reps</strong> in one set for {next.label}
-      </p>
-    );
-  }
-  return (
-    <p className="next-line">
-      <strong className="tabular">+{formatKg(next.kg_needed)}</strong> on your best for {next.label}
-    </p>
-  );
-}
 
 function LogButton({ code, label = 'Log', variant = 'quiet', iconOnly = false }) {
   const { openLogSet } = useLogSet();
@@ -49,64 +30,105 @@ function LogButton({ code, label = 'Log', variant = 'quiet', iconOnly = false })
   );
 }
 
-function ExerciseCard({ entry }) {
-  const { exercise, rank } = entry;
+/**
+ * The weighted barbell lift closest to its own next division, in kilograms.
+ * It moves that lift up a division; the overall follows from the lifts.
+ * Bodyweight lifts are left out: their target reads as reps, not a plate.
+ */
+function quickestStep(exercises) {
+  return exercises
+    .filter(
+      (entry) =>
+        entry.exercise.global_weight > 0 &&
+        entry.exercise.type === 'external' &&
+        entry.next_division?.kg_needed > 0,
+    )
+    .reduce((best, entry) => (!best || entry.next_division.kg_needed < best.next_division.kg_needed ? entry : best), null);
+}
 
-  if (!entry.has_data) {
-    return (
-      <Card
-        title={exercise.label}
-        faIcon={exerciseIcon(exercise.code)}
-        className="exercise-card exercise-card--empty"
-      >
-        <div className="row exercise-card__top">
-          <RankBadge rank={null} />
-          <LogButton code={exercise.code} label="Log a set" variant="soft" />
-        </div>
-      </Card>
-    );
-  }
+function OverallHero({ ranks }) {
+  const { overall } = ranks;
+  const next = overall.rank.next_division;
+  const step = quickestStep(ranks.exercises);
 
   return (
-    <Card
-      title={exercise.label}
-      faIcon={exerciseIcon(exercise.code)}
-      accent={rank.color}
-      className="exercise-card"
-      actions={<LogButton code={exercise.code} iconOnly />}
-    >
-      <div className="row exercise-card__top">
-        <RankBadge rank={rank} />
-        <span className="tabular exercise-card__index">
-          {formatIndex(entry.effective_index)}
-          <span className="muted"> / 1000</span>
-        </span>
-      </div>
-
-      <ProgressBar
-        value={rank.within_division_pct}
-        color={rank.color}
-        label={`Progress through ${rank.label}`}
-      />
-
-      <NextDivisionLine entry={entry} />
-
-      {entry.decayed && (
-        <p className="decay-note">
-          <Icon name="warning" />
-          <span>
-            Your best here is {entry.days_since_best} days old, so it counts for{' '}
-            {Math.round(entry.decay_factor * 100)}% until you train it again.
-          </span>
+    <section className="hero" style={{ '--hero-color': overall.rank.color }} aria-labelledby="overall-title">
+      <RankBadge rank={overall.rank} size="lg" layout="stack" />
+      <div className="hero__main">
+        <p className="hero__eyebrow" id="overall-title">
+          Overall rank
         </p>
-      )}
-    </Card>
+        <p className="hero__meaning">{overall.rank.meaning}</p>
+        <div className="hero__progress">
+          <ProgressBar
+            value={overall.rank.within_division_pct}
+            color={overall.rank.color}
+            label={`Progress through ${overall.rank.label}`}
+            caption={
+              next ? (
+                <>
+                  <strong className="tabular">{Math.floor(overall.rank.within_division_pct)}%</strong> of the way
+                  to <strong>{next.label}</strong>
+                </>
+              ) : (
+                'You are at the top of the scale.'
+              )
+            }
+          />
+        </div>
+        {step && (
+          <p className="hero__step">
+            <Icon name="record" />
+            <span>
+              Closest step: <strong className="tabular">+{formatKg(step.next_division.kg_needed)}</strong> on your{' '}
+              {step.exercise.label} takes it to {step.next_division.label}.
+            </span>
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SetupHero({ ranks }) {
+  const { overall } = ranks;
+  const missing = overall.required_exercises - overall.exercises_with_data;
+  return (
+    <section className="hero hero--setup" aria-labelledby="setup-title">
+      <div className="hero__main">
+        <p className="hero__eyebrow">Overall rank</p>
+        <h2 id="setup-title" className="hero__title">
+          Log {missing} more exercise{missing === 1 ? '' : 's'} to unlock it
+        </h2>
+        <ProgressBar
+          value={(overall.exercises_with_data / overall.required_exercises) * 100}
+          label="Exercises logged"
+          caption={`${overall.exercises_with_data} of ${overall.required_exercises} done`}
+        />
+      </div>
+      <ul className="checklist">
+        {ranks.exercises
+          .filter((entry) => entry.exercise.global_weight > 0)
+          .map((entry) => (
+            <li key={entry.exercise.code} className={`checklist__item ${entry.has_data ? 'is-done' : ''}`}>
+              <span className="checklist__mark" aria-hidden="true">
+                {entry.has_data && <Icon name="confirm" />}
+              </span>
+              <span className="checklist__label">
+                {entry.exercise.label}
+                <span className="visually-hidden">{entry.has_data ? ' (done)' : ' (to do)'}</span>
+              </span>
+              {!entry.has_data && <LogButton code={entry.exercise.code} variant="soft" />}
+            </li>
+          ))}
+      </ul>
+    </section>
   );
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [ranks, setRanks] = useState(null);
+  const [data, setData] = useState(null);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
 
@@ -114,7 +136,13 @@ export default function Dashboard() {
     setStatus('loading');
     setError(null);
     try {
-      setRanks(await api.get('/ranks'));
+      const [ranks, friends, activity, timeline] = await Promise.all([
+        api.get('/ranks'),
+        api.get('/friends'),
+        api.get('/stats/activity'),
+        api.get('/stats/bodyweight'),
+      ]);
+      setData({ ranks, friends: friends.friends, activity, timeline });
       setStatus('ready');
     } catch (loadError) {
       setError(loadError.message);
@@ -127,7 +155,10 @@ export default function Dashboard() {
   }, [load]);
   useEffect(() => onPerformancesChanged(load), [load]);
 
-  const overall = ranks?.overall;
+  const timelineRows = useMemo(
+    () => (data?.timeline.points ?? []).filter((point) => point.overall_index !== null),
+    [data],
+  );
 
   return (
     <>
@@ -135,7 +166,7 @@ export default function Dashboard() {
         <div>
           <h1>Hi, {user.username}</h1>
           <p>
-            Your strength ranks. <Link to="/rank-explained">How ranks work &rarr;</Link>
+            Your training at a glance. <Link to="/rank-explained">How ranks work &rarr;</Link>
           </p>
         </div>
       </div>
@@ -143,88 +174,54 @@ export default function Dashboard() {
       <AsyncView status={status} error={error} onRetry={load} loadingLabel="Working out your ranks">
         {status === 'ready' && (
           <>
-            {overall.complete ? (
-              <section
-                className="hero"
-                style={{ '--hero-color': overall.rank.color }}
-                aria-labelledby="overall-title"
-              >
-                <div className="hero__main">
-                  <p className="hero__eyebrow" id="overall-title">
-                    Overall rank
-                  </p>
-                  <RankBadge rank={overall.rank} size="lg" />
-                  <p className="hero__meaning">{overall.rank.meaning}</p>
-                </div>
-                <div className="hero__score">
-                  <span className="hero__number tabular">{formatIndex(overall.index)}</span>
-                  <span className="hero__max">/ 1000</span>
-                </div>
-                <div className="hero__progress">
-                  <ProgressBar
-                    value={overall.rank.within_division_pct}
-                    color={overall.rank.color}
-                    label={`Progress through ${overall.rank.label}`}
-                    caption={
-                      overall.rank.next_division ? (
-                        <>
-                          <strong className="tabular">
-                            {formatNumber(overall.rank.next_division.index_needed, 0)} pts
-                          </strong>{' '}
-                          to {overall.rank.next_division.label}
-                        </>
-                      ) : (
-                        'You are at the top of the scale.'
-                      )
-                    }
-                  />
-                </div>
-              </section>
-            ) : (
-              <section className="hero hero--setup" aria-labelledby="setup-title">
-                <div className="hero__main">
-                  <p className="hero__eyebrow">Overall rank</p>
-                  <h2 id="setup-title" className="hero__title">
-                    Log {overall.required_exercises - overall.exercises_with_data} more exercise
-                    {overall.required_exercises - overall.exercises_with_data === 1 ? '' : 's'} to
-                    unlock it
-                  </h2>
-                  <ProgressBar
-                    value={(overall.exercises_with_data / overall.required_exercises) * 100}
-                    label="Exercises logged"
-                    caption={`${overall.exercises_with_data} of ${overall.required_exercises} done`}
-                  />
-                </div>
-                <ul className="checklist">
-                  {ranks.exercises
-                    .filter((entry) => entry.exercise.global_weight > 0)
-                    .map((entry) => (
-                      <li
-                        key={entry.exercise.code}
-                        className={`checklist__item ${entry.has_data ? 'is-done' : ''}`}
-                      >
-                        <span className="checklist__mark" aria-hidden="true">
-                          {entry.has_data && <Icon name="confirm" />}
-                        </span>
-                        <span className="checklist__label">
-                          {entry.exercise.label}
-                          <span className="visually-hidden">
-                            {entry.has_data ? ' (done)' : ' (to do)'}
-                          </span>
-                        </span>
-                        {!entry.has_data && <LogButton code={entry.exercise.code} variant="soft" />}
-                      </li>
-                    ))}
-                </ul>
-              </section>
-            )}
+            {data.ranks.overall.complete ? <OverallHero ranks={data.ranks} /> : <SetupHero ranks={data.ranks} />}
 
-            <h2 className="section-heading">By exercise</h2>
-            <div className="grid">
-              {ranks.exercises.map((entry) => (
-                <ExerciseCard key={entry.exercise.code} entry={entry} />
-              ))}
+            <SummaryTiles activity={data.activity} />
+
+            {/* The lifts are the core of the app, so they come first, with the
+                social and the trend beside them rather than after. */}
+            <div className="grid grid--2 dashboard-split stack-bottom">
+              <ExerciseList exercises={data.ranks.exercises} />
+
+              <div className="dashboard-side">
+                <Leaderboard me={user} myOverall={data.ranks.overall} friends={data.friends} />
+
+                <Card
+                  title="Progression"
+                  icon="progress"
+                  subtitle="Your overall rank over time."
+                  className="card--fill"
+                  actions={
+                    <Link to="/progress" className="card__link">
+                      Stats &rarr;
+                    </Link>
+                  }
+                >
+                  {timelineRows.length > 1 ? (
+                    <div className="chart-fill">
+                      <RankLineChart
+                        rows={timelineRows}
+                        dataKey="overall_index"
+                        thresholds={data.timeline.thresholds}
+                        name="Overall rank"
+                        height="100%"
+                      />
+                    </div>
+                  ) : (
+                    <p className="muted">Your progression appears here once you have an overall rank.</p>
+                  )}
+                </Card>
+              </div>
             </div>
+
+            <Card
+              title="Attendance"
+              icon="dashboard"
+              subtitle={`${data.activity.days.length} training day${data.activity.days.length === 1 ? '' : 's'} in the last year.`}
+              className="stack-bottom"
+            >
+              <ActivityGrid days={data.activity.days} to={data.activity.to} />
+            </Card>
           </>
         )}
       </AsyncView>

@@ -723,24 +723,9 @@ tbody tr:last-child td {
   margin-bottom: var(--space-3);
 }
 
-.overall__index {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.overall__index .muted {
-  font-size: var(--text-md);
-  font-weight: 400;
-}
-
 .exercise-card__top {
   justify-content: space-between;
   margin-bottom: var(--space-2);
-}
-
-.exercise-card__index {
-  font-size: var(--text-sm);
 }
 
 .next-line {
@@ -1003,13 +988,18 @@ tbody tr:last-child td {
 /* The overall rank is the headline: one big flat block, rank-coloured edge. */
 .hero {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr;
   gap: var(--space-3) var(--space-4);
   align-items: center;
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--surface);
   border-left: 8px solid var(--hero-color, var(--accent));
+  margin-bottom: var(--space-3);
+}
+
+.hero > .rank-badge--stack {
+  padding: 0 var(--space-3);
 }
 
 .hero__main {
@@ -1044,26 +1034,26 @@ tbody tr:last-child td {
   text-transform: uppercase;
 }
 
-.hero__score {
+.hero__progress {
+  align-self: stretch;
+  max-width: 32rem;
+}
+
+.hero__step {
   display: flex;
   align-items: baseline;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
-.hero__number {
-  font-size: 3.5rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
+.hero__step svg {
+  color: var(--hero-color, var(--accent));
 }
 
-.hero__max {
-  color: var(--text-faint);
-  font-weight: 600;
-}
-
-.hero__progress {
-  grid-column: 1 / -1;
+.hero__step strong {
+  color: var(--text);
 }
 
 .hero__progress .progress__caption strong {
@@ -1130,11 +1120,6 @@ tbody tr:last-child td {
   color: var(--text-muted);
 }
 
-.exercise-card__index {
-  font-size: var(--text-lg);
-  font-weight: 800;
-}
-
 .exercise-card--empty .card__icon {
   color: var(--text-faint);
   background: var(--surface-raised);
@@ -1146,13 +1131,207 @@ tbody tr:last-child td {
     padding: 20px;
   }
 
-  .hero__number {
-    font-size: 2.75rem;
+  .hero > .rank-badge--stack {
+    flex-direction: row;
+    padding: 0;
   }
 
   .checklist {
     min-width: 0;
   }
+}
+
+/* ------------------------------------------------- dashboard summary --- */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 800px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.tile__label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.tile__value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.tile__hint {
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.card__link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Leaderboard: position, avatar, name, badge. */
+.leaderboard {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leaderboard__row {
+  display: grid;
+  grid-template-columns: 28px auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px var(--space-2);
+  border-radius: var(--radius);
+}
+
+.leaderboard__row + .leaderboard__row {
+  margin-top: 2px;
+}
+
+.leaderboard__row.is-self {
+  background: var(--accent-soft);
+}
+
+.leaderboard__row.is-unranked {
+  color: var(--text-muted);
+}
+
+.leaderboard__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.leaderboard__pos {
+  font-weight: 800;
+  text-align: center;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard__pos--1 {
+  color: var(--rank-gold);
+}
+
+.leaderboard__pos--2 {
+  color: var(--rank-silver);
+}
+
+.leaderboard__pos--3 {
+  color: var(--rank-bronze);
+}
+
+/* One block per lift: name, badge and log button on top, progress under. */
+.lift-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lift {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.lift:first-child {
+  padding-top: 0;
+}
+
+.lift:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.lift__name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-weight: 600;
+}
+
+.lift__name svg {
+  color: var(--text-faint);
+}
+
+.lift__rank {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.lift__progress {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+}
+
+.lift__progress .next-line,
+.lift__progress .decay-note {
+  margin: var(--space-1) 0 0;
+}
+
+.lift--empty .lift__name {
+  color: var(--text-muted);
+}
+
+/* Lifts on the left, leaderboard and progression on the right, both columns
+   ending level: the progression chart absorbs whatever height is left. */
+.dashboard-split {
+  align-items: stretch;
+}
+
+.dashboard-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.card--fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card--fill > .card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-fill {
+  flex: 1;
+  min-height: 240px;
 }
 
 /* ---------------------------------------------------------- auth forms --- */
