@@ -10,8 +10,8 @@ import './Navbar.css';
 
 const LINKS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/performances', label: 'Workouts', icon: 'performances' },
-  { to: '/progress', label: 'Progress', icon: 'progress' },
+  { to: '/performances', label: 'History', icon: 'performances' },
+  { to: '/progress', label: 'Stats', icon: 'progress' },
   { to: '/friends', label: 'Friends', icon: 'friends' },
 ];
 

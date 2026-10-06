@@ -83,3 +83,73 @@ export function mergeSeries(series, valueKey, dateKey = 'performed_at') {
   }
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
+
+// ---------------------------------------------------------------------------
+// Rank axis: the index drives the line, but the reader only ever sees ranks.
+// ---------------------------------------------------------------------------
+
+const DIVISIONS = ['IV', 'III', 'II', 'I'];
+const MAX_INDEX = 1000;
+
+/**
+ * Every division as { start, end, label, color }, built from the API's rank
+ * thresholds (each rank's lower bound, Iron excluded since it starts at 0).
+ */
+export function divisionBands(thresholds) {
+  const ranks = [
+    { name: 'Iron', start: 0, color: '#6b7280' },
+    ...thresholds.map((t) => ({ name: t.abbreviation, start: t.index, color: t.color })),
+  ];
+  return ranks.flatMap((rank, i) => {
+    const end = ranks[i + 1]?.start ?? MAX_INDEX + 1;
+    const span = (end - rank.start) / DIVISIONS.length;
+    return DIVISIONS.map((division, slot) => ({
+      start: rank.start + slot * span,
+      end: rank.start + (slot + 1) * span,
+      label: `${rank.name} ${division}`,
+      rank: rank.name,
+      firstOfRank: slot === 0,
+      color: rank.color,
+    }));
+  });
+}
+
+/** "Gold II" for an index, or an em dash for nothing. */
+export function divisionLabel(bands, value) {
+  if (value === null || value === undefined) return '—';
+  const band = bands.find((b) => value < b.end) ?? bands.at(-1);
+  return band.label;
+}
+
+/** Above this many divisions, ticks mark whole ranks instead. */
+const MAX_DIVISION_TICKS = 10;
+
+/**
+ * <YAxis /> props that zoom on the divisions the data actually crosses and
+ * label each tick with the division starting there, or with the rank when
+ * the data spans too many divisions to label them all.
+ */
+export function rankAxisProps(bands, values) {
+  const present = values.filter((v) => v !== null && v !== undefined);
+  const lo = present.length ? Math.min(...present) : 0;
+  const hi = present.length ? Math.max(...present) : MAX_INDEX;
+  const first = bands.findIndex((b) => lo < b.end);
+  const last = bands.findIndex((b) => hi < b.end);
+  const shown = bands.slice(Math.max(0, first), (last === -1 ? bands.length - 1 : last) + 1);
+  const domainTop = Math.min(MAX_INDEX, shown.at(-1).end);
+  const coarse = shown.length > MAX_DIVISION_TICKS;
+  const ticked = coarse ? shown.filter((b) => b.firstOfRank) : shown;
+
+  return {
+    ...AXIS_BASE,
+    width: 96,
+    type: 'number',
+    domain: [shown[0].start, domainTop],
+    ticks: ticked.map((b) => b.start),
+    interval: 0,
+    tickFormatter: (value) => {
+      const band = bands.find((b) => value < b.end) ?? bands.at(-1);
+      return coarse ? band.rank : band.label;
+    },
+  };
+}

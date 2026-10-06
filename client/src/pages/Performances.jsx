@@ -11,7 +11,7 @@ import RankBadge from '../components/RankBadge.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { exerciseIcon } from '../components/icons.js';
 import { api } from '../lib/api.js';
-import { formatDate, formatIndex, formatKg } from '../lib/format.js';
+import { formatDate, formatKg } from '../lib/format.js';
 import { onPerformancesChanged } from '../lib/performanceEvents.js';
 import PerformanceForm from './PerformanceForm.jsx';
 
@@ -105,7 +105,7 @@ export default function Performances() {
     <>
       <div className="page-header">
         <div>
-          <h1>Workouts</h1>
+          <h1>History</h1>
           <p>Every set you have logged.</p>
         </div>
       </div>
@@ -189,9 +189,6 @@ export default function Performances() {
                     <th scope="col" className="numeric">
                       Est. 1RM
                     </th>
-                    <th scope="col" className="numeric">
-                      Score
-                    </th>
                     <th scope="col">Rank</th>
                     <th scope="col">
                       <span className="visually-hidden">Actions</span>
@@ -210,10 +207,6 @@ export default function Performances() {
                       </td>
                       <td>{describeSet(row)}</td>
                       <td className="numeric">{formatKg(row.e1rm_kg)}</td>
-                      <td className="numeric">
-                        <strong>{formatIndex(row.strength_index)}</strong>
-                        <span className="muted"> / 1000</span>
-                      </td>
                       <td>
                         <RankBadge rank={row.rank} size="sm" />
                         {!row.counts_toward_rank && row.flags.length > 0 && (
