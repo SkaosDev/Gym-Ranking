@@ -4,7 +4,13 @@ import { get } from '../lib/db.js';
 import { ApiError } from '../lib/errors.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { validateQuery } from '../middleware/validate.js';
-import { bodyweightSeries, e1rmSeries, indexSeries, radarSnapshot } from '../services/stats.js';
+import {
+  activitySeries,
+  bodyweightSeries,
+  e1rmSeries,
+  indexSeries,
+  radarSnapshot,
+} from '../services/stats.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -36,6 +42,10 @@ router.get('/radar', (req, res) => {
 
 router.get('/bodyweight', (req, res) => {
   res.json(bodyweightSeries(req.user));
+});
+
+router.get('/activity', (req, res) => {
+  res.json(activitySeries(req.user));
 });
 
 export default router;

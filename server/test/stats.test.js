@@ -13,7 +13,7 @@ const { runMigrations } = await import('../lib/migrate.js');
 const { createApp } = await import('../app.js');
 const { findUserById } = await import('../lib/users.js');
 const { computeRanks } = await import('../services/ranks.js');
-const { bodyweightSeries, e1rmSeries, indexSeries, radarSnapshot } = await import(
+const { activitySeries, bodyweightSeries, e1rmSeries, indexSeries, radarSnapshot } = await import(
   '../services/stats.js'
 );
 
@@ -277,5 +277,39 @@ describe('the stats endpoints', () => {
     const b = await signUp();
     const res = await b.client.request('GET', '/api/stats/e1rm');
     assert.equal(res.json.series.length, 0);
+  });
+});
+
+describe('activity', () => {
+  it('counts sets per training day and summarises the streak', async () => {
+    const { client, user } = await signUp();
+    // asOf is a Wednesday; sessions in this week and the two before it.
+    await log(client, EX.squat, 100, 5, '2026-09-28');
+    await log(client, EX.bench, 80, 5, '2026-09-28');
+    await log(client, EX.squat, 100, 5, '2026-09-22');
+    await log(client, EX.squat, 100, 5, '2026-09-14');
+    await log(client, EX.squat, 100, 5, '2026-08-01'); // after a gap
+
+    const activity = activitySeries(user, { asOf: '2026-09-30' });
+    assert.deepEqual(activity.days.find((d) => d.date === '2026-09-28'), { date: '2026-09-28', sets: 2 });
+    assert.equal(activity.streak_weeks, 3, 'three consecutive weeks, the gap ends it');
+    assert.equal(activity.sessions_last_30_days, 3);
+    assert.equal(activity.sets_last_30_days, 4);
+    assert.equal(activity.last_session, '2026-09-28');
+  });
+
+  it('does not break the streak before the current week is over', async () => {
+    const { client, user } = await signUp();
+    await log(client, EX.squat, 100, 5, '2026-09-25'); // last week
+    const activity = activitySeries(user, { asOf: '2026-09-28' }); // Monday, nothing yet
+    assert.equal(activity.streak_weeks, 1);
+  });
+
+  it('is empty for a new account', async () => {
+    const { user } = await signUp();
+    const activity = activitySeries(user);
+    assert.deepEqual(activity.days, []);
+    assert.equal(activity.streak_weeks, 0);
+    assert.equal(activity.last_session, null);
   });
 });

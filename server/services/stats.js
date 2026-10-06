@@ -194,5 +194,58 @@ export function bodyweightSeries(user, { asOf = today() } = {}) {
     };
   });
 
-  return { points };
+  return { points, thresholds: RANK_THRESHOLDS };
+}
+
+/** Monday of the week containing an ISO date, as an ISO date. */
+function mondayOf(isoDate) {
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  const offset = (date.getUTCDay() + 6) % 7; // Monday = 0
+  return new Date(date.getTime() - offset * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+/**
+ * Training days over the last year, for the attendance grid, plus the few
+ * figures the dashboard summarises. Every logged set counts here, flagged or
+ * not: attendance is about showing up, not about what the rank accepts.
+ */
+export function activitySeries(user, { asOf = today() } = {}) {
+  const since = new Date(Date.parse(`${asOf}T00:00:00Z`) - 371 * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
+
+  const days = all(
+    `SELECT performed_at AS date, COUNT(*) AS sets
+       FROM performances
+      WHERE user_id = ? AND performed_at BETWEEN ? AND ?
+      GROUP BY performed_at
+      ORDER BY performed_at ASC`,
+    [user.id, since, asOf],
+  ).map((row) => ({ date: row.date, sets: row.sets }));
+
+  const last30Days = days.filter((day) => daysBetween(day.date, asOf) < 30);
+  const setsLast30Days = last30Days.reduce((sum, day) => sum + day.sets, 0);
+
+  // Consecutive weeks with at least one session. The current week only
+  // breaks the streak once it is over, so a Monday morning does not reset it.
+  const trainedWeeks = new Set(days.map((day) => mondayOf(day.date)));
+  let cursor = mondayOf(asOf);
+  if (!trainedWeeks.has(cursor)) {
+    cursor = new Date(Date.parse(`${cursor}T00:00:00Z`) - 7 * MS_PER_DAY).toISOString().slice(0, 10);
+  }
+  let streakWeeks = 0;
+  while (trainedWeeks.has(cursor)) {
+    streakWeeks += 1;
+    cursor = new Date(Date.parse(`${cursor}T00:00:00Z`) - 7 * MS_PER_DAY).toISOString().slice(0, 10);
+  }
+
+  return {
+    from: since,
+    to: asOf,
+    days,
+    sessions_last_30_days: last30Days.length,
+    sets_last_30_days: setsLast30Days,
+    streak_weeks: streakWeeks,
+    last_session: days.at(-1)?.date ?? null,
+  };
 }
