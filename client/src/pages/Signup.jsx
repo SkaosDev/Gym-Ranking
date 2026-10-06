@@ -69,7 +69,7 @@ export default function Signup() {
 
       <Card
         title="Create your account"
-        subtitle="Takes a minute. Your body data stays private."
+        subtitle="Takes a minute. Only friends ever see your stats."
       >
         {error && (
           <div className="notice notice--error" role="alert">

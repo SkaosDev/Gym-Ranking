@@ -6,6 +6,7 @@ import { validateBody, validateQuery } from '../middleware/validate.js';
 import {
   acceptRequest,
   declineRequest,
+  friendsProgress,
   listFriends,
   removeFriendship,
   requestFriendship,
@@ -24,6 +25,11 @@ function parseId(raw) {
 /** Incoming, outgoing and accepted in one payload, so the page needs one call. */
 router.get('/', (req, res) => {
   res.json(listFriends(req.user));
+});
+
+/** Overall rank over time for you and your friends, for the comparison chart. */
+router.get('/progress', (req, res) => {
+  res.json(friendsProgress(req.user));
 });
 
 router.get('/search', validateQuery({ q: { type: 'string', required: true, max: 20 } }), (req, res) => {

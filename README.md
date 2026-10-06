@@ -101,7 +101,7 @@ they were created in.
 | **Performances** | Full CRUD over your sets, each scored on the way out |
 | **Ranks** | Per exercise and overall, with the exact kilograms to the next division |
 | **Progress** | Estimated 1RM over time, strength index against the rank thresholds, a radar of your current index, and bodyweight against your overall index |
-| **Friends** | Send and accept requests by username, and see a friend's ranks — never their body data |
+| **Friends** | A leaderboard and a progress comparison with your friends; send and accept requests by username; a friend's page shows their ranks, progression, attendance, age, sex, height and current weight |
 
 Seven exercises are tracked: back squat, bench press, deadlift, overhead press,
 pull-up, dip and push-up.
@@ -110,10 +110,10 @@ Eight ranks — Iron, Bronze, Silver, Gold, Platinum, Diamond, Master and
 Unkillable Demon King — each split into four divisions, IV to I. About thirty
 steps. The first arrive within weeks; the last is meant to stay out of reach.
 
-**There is no leaderboard.** Ranks are read from fixed, published standards
+**Ranks are absolute.** They are read from fixed, published standards
 (Strength Level's tables, by bodyweight), so your rank never depends on anybody
-else in the app. Friends are
-listed alphabetically and are never sorted by rank.
+else in the app. The leaderboard only lines friends up by those absolute ranks;
+it does not grade anyone against the others.
 
 ---
 
@@ -159,15 +159,15 @@ Run from `server/`:
 ## Testing
 
 ```sh
-npm test                     # 177 tests
-cd server && npm run smoke   # 72 checks against a running server
+npm test                     # 188 tests
+cd server && npm run smoke   # 73 checks against a running server
 ```
 
 The unit tests cover the scoring engine against its published control values,
 every age-table boundary, the schema constraints, and the friendship rules. The
 smoke run exercises the real HTTP API — including a check that walks every key
-of every friend-facing response and fails if any body data, load or note appears
-in it.
+of every friend-facing response and fails if an email, a birth date, a load or a
+note appears in it, or if a stranger sees any body detail.
 
 ---
 
@@ -199,13 +199,19 @@ rate limiting on more than the login route, and email verification at signup.
 
 ### What friends can see
 
-Friends see **ranks and indices** — already-normalised, relative numbers.
+Friends see your **ranks**, your overall rank over time, which days you
+trained and how many sets, and four body details: **age, sex, height and
+current weight**.
 
-They never see your email, date of birth, height, bodyweight or weight history,
-the kilograms on the bar, or your notes. That scoping is done by the SQL
-queries, not by filtering the response afterwards: a field dropped late is a
-field that was still selected, and one careless `res.json(row)` puts it back on
-the wire. You can also hide your ranks from friends entirely, from your profile.
+They never see your email, your date of birth (only the age computed from it),
+your weight history, the kilograms on the bar, your estimated maxes, or your
+notes. Strangers see the username and nothing else.
+
+That scoping is done by the SQL queries, not by filtering the response
+afterwards: a field dropped late is a field that was still selected, and one
+careless `res.json(row)` puts it back on the wire. You can also hide your ranks
+from friends entirely, from your profile; the body details stay visible to
+friends either way.
 
 ---
 

@@ -344,11 +344,10 @@ describe('the public profile, scoped by friendship', () => {
     return user;
   }
 
+  // Never shown to anyone else, friend or not.
   const FORBIDDEN_KEYS = [
     'email',
     'birth_date',
-    'height_cm',
-    'weight_kg',
     'bodyweight_kg',
     'current_weight_kg',
     'weighed_at',
@@ -368,11 +367,13 @@ describe('the public profile, scoped by friendship', () => {
     'private-address',
     '1991-07-23',
     'secret-training-note',
-    '193',
-    '87.3',
     '177.5',
     '122.5',
   ];
+
+  // Shown to friends, never to strangers.
+  const FRIEND_ONLY_KEYS = ['height_cm', 'weight_kg', 'age', 'sex'];
+  const FRIEND_ONLY_VALUES = ['193', '87.3'];
 
   it('shows a stranger the username and nothing else', async () => {
     const owner = await richUser();
@@ -437,6 +438,47 @@ describe('the public profile, scoped by friendship', () => {
     assert.ok(res.json.index_series[0].points.every((p) => p.date && typeof p.index === 'number'));
   });
 
+  it('shows friends age, sex, height and latest weight, never the birth date', async () => {
+    const owner = await richUser();
+    // A new reading for today replaces the signup weight.
+    await owner.client.request('POST', '/api/me/weights', {
+      weight_kg: 88.1,
+      measured_at: new Date().toISOString().slice(0, 10),
+    });
+    const friend = await signUp();
+    const created = await friend.client.request('POST', '/api/friends/requests', {
+      username: owner.profile.username,
+    });
+    await owner.client.request('POST', `/api/friends/requests/${created.json.id}/accept`);
+
+    const res = await friend.client.request('GET', `/api/users/${owner.profile.username}`);
+    assert.equal(res.json.details.sex, 'M');
+    assert.equal(res.json.details.height_cm, 193);
+    assert.equal(res.json.details.weight_kg, 88.1, 'the current weight');
+    assert.ok(res.json.details.age >= 35);
+    assert.ok(!res.text.includes('1991-07-23'));
+
+    // Still shared when ranks are hidden.
+    await owner.client.request('PATCH', '/api/me/profile', { ranks_visible_to_friends: false });
+    const hidden = await friend.client.request('GET', `/api/users/${owner.profile.username}`);
+    assert.equal(hidden.json.details.height_cm, 193);
+  });
+
+  it('shows a friend the overall timeline and attendance', async () => {
+    const owner = await richUser();
+    const friend = await signUp();
+    const created = await friend.client.request('POST', '/api/friends/requests', {
+      username: owner.profile.username,
+    });
+    await owner.client.request('POST', `/api/friends/requests/${created.json.id}/accept`);
+
+    const res = await friend.client.request('GET', `/api/users/${owner.profile.username}`);
+    assert.ok(res.json.overall_series.length > 0);
+    assert.ok(res.json.overall_series.every((p) => p.date && p.overall_index > 0));
+    assert.ok(res.json.thresholds.length > 0);
+    assert.deepEqual(Object.keys(res.json.activity.days[0] ?? { date: 1, sets: 1 }).sort(), ['date', 'sets']);
+  });
+
   it('never leaks body data, loads or notes, in any of the three views', async () => {
     const owner = await richUser();
     const stranger = await signUp();
@@ -460,6 +502,17 @@ describe('the public profile, scoped by friendship', () => {
     // Also the friends list, which carries each friend's overall rank.
     views.push(await fullFriend.client.request('GET', '/api/friends'));
     views.push(await stranger.client.request('GET', '/api/friends/search?q=rich'));
+
+    // The stranger's profile view and the search results: no body details.
+    for (const view of [views[0], views[4]]) {
+      const keys = allKeys(view.json);
+      for (const forbidden of FRIEND_ONLY_KEYS) {
+        assert.ok(!keys.has(forbidden), `key "${forbidden}" shown to a stranger`);
+      }
+      for (const forbidden of FRIEND_ONLY_VALUES) {
+        assert.ok(!view.text.includes(forbidden), `value "${forbidden}" shown to a stranger`);
+      }
+    }
 
     for (const view of views) {
       const keys = allKeys(view.json);
@@ -526,5 +579,31 @@ describe('the friends list', () => {
     const entry = res.json.friends.find((f) => f.username === shy.profile.username);
     assert.equal(entry.ranks_visible, false);
     assert.equal(entry.overall, null);
+  });
+});
+
+describe('friends progress', () => {
+  it('has you and every friend who shares ranks, and nobody else', async () => {
+    const me = await signUp();
+    const open = await signUp();
+    const shy = await signUp();
+    const stranger = await signUp();
+    for (const other of [open, shy]) {
+      const created = await me.client.request('POST', '/api/friends/requests', {
+        username: other.profile.username,
+      });
+      await other.client.request('POST', `/api/friends/requests/${created.json.id}/accept`);
+    }
+    await shy.client.request('PATCH', '/api/me/profile', { ranks_visible_to_friends: false });
+
+    const res = await me.client.request('GET', '/api/friends/progress');
+    assert.equal(res.status, 200, res.text);
+    const names = res.json.people.map((p) => p.username);
+    assert.ok(names.includes(me.profile.username));
+    assert.ok(names.includes(open.profile.username));
+    assert.ok(!names.includes(shy.profile.username), 'hidden ranks stay hidden');
+    assert.ok(!names.includes(stranger.profile.username));
+    assert.equal(res.json.people.filter((p) => p.is_self).length, 1);
+    assert.ok(res.json.thresholds.length > 0);
   });
 });

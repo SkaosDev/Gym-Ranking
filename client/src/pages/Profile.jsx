@@ -191,7 +191,7 @@ export default function Profile() {
               <label htmlFor="ranks_visible_to_friends">Let friends see my ranks</label>
             </div>
             <span className="field-hint">
-              Your bodyweight, loads and notes are never shared, whichever way this is set.
+              Friends always see your age, sex, height and current weight. Loads, notes and your weight history are never shared.
             </span>
 
             <p className="form-actions">

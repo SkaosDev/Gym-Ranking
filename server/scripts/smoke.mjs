@@ -618,13 +618,26 @@ async function phase9() {
     JSON.stringify(friendView.json).slice(0, 160),
   );
 
+  expect(
+    'a friend sees age, sex, height and current weight, not the birth date',
+    friendView.json.details?.height_cm === 193 &&
+      friendView.json.details?.weight_kg === 87.3 &&
+      Number.isInteger(friendView.json.details?.age) &&
+      !friendView.text.includes('1991-07-23'),
+    JSON.stringify(friendView.json.details),
+  );
+
   const friendsList = await req('GET', '/api/friends');
+  // Never shown to anyone else, friend or not.
   const forbiddenKeys = [
-    'email', 'birth_date', 'height_cm', 'weight_kg', 'bodyweight_kg', 'current_weight_kg',
+    'email', 'birth_date', 'bodyweight_kg', 'current_weight_kg',
     'notes', 'e1rm_kg', 'adjusted_e1rm_kg', 'standards_kg', 'effective_load_kg',
     'target_e1rm_kg', 'kg_needed', 'bodyweight_reps', 'password_hash', 'password_salt',
   ];
-  const forbiddenValues = ['smoke-private', '1991-07-23', 'smoke-secret-note', '193', '87.3', '177.5'];
+  const forbiddenValues = ['smoke-private', '1991-07-23', 'smoke-secret-note', '177.5'];
+  // Shown to friends on their profile, never to a stranger or in the list.
+  const friendOnlyKeys = ['height_cm', 'weight_kg', 'age', 'sex'];
+  const friendOnlyValues = ['193', '87.3'];
 
   const collectKeys = (value, found = new Set()) => {
     if (Array.isArray(value)) value.forEach((item) => collectKeys(item, found));
@@ -643,8 +656,13 @@ async function phase9() {
     for (const key of forbiddenKeys) if (keys.has(key)) leaks.push(`key ${key}`);
     for (const value of forbiddenValues) if (view.text.includes(value)) leaks.push(`value ${value}`);
   }
+  for (const view of [stranger, friendsList]) {
+    const keys = collectKeys(view.json);
+    for (const key of friendOnlyKeys) if (keys.has(key)) leaks.push(`friend-only key ${key}`);
+    for (const value of friendOnlyValues) if (view.text.includes(value)) leaks.push(`friend-only value ${value}`);
+  }
   expect(
-    'no body data, load or note appears in any friend-facing payload',
+    'no email, birth date, load or note appears in any friend-facing payload',
     leaks.length === 0,
     leaks.join(', '),
   );

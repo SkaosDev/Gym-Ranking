@@ -11,8 +11,9 @@
  */
 import { all, get, run } from '../lib/db.js';
 import { ApiError } from '../lib/errors.js';
+import { ageOn } from '../lib/scoring.js';
 import { computeRanks } from './ranks.js';
-import { indexSeries } from './stats.js';
+import { RANK_THRESHOLDS, activitySeries, bodyweightSeries, indexSeries } from './stats.js';
 
 export const SEARCH_MIN_LENGTH = 3;
 export const SEARCH_LIMIT = 10;
@@ -40,6 +41,32 @@ function readPublicIdentity(username) {
  */
 function readScoringIdentityNeverSerialise(userId) {
   return get('SELECT id, sex, birth_date FROM users WHERE id = ?', [userId]);
+}
+
+/**
+ * The body details friends are shown: age, sex, height and the latest
+ * weigh-in. The age is computed here so the date of birth itself never
+ * leaves, and the weight history stays with the owner.
+ */
+function readFriendDetails(userId) {
+  const row = get('SELECT sex, birth_date, height_cm FROM users WHERE id = ?', [userId]);
+  const weight = get(
+    'SELECT weight_kg FROM body_weights WHERE user_id = ? ORDER BY measured_at DESC LIMIT 1',
+    [userId],
+  );
+  return {
+    age: ageOn(row.birth_date, new Date().toISOString().slice(0, 10)),
+    sex: row.sex,
+    height_cm: row.height_cm,
+    weight_kg: weight?.weight_kg ?? null,
+  };
+}
+
+/** The overall index day by day, without the bodyweight it sits next to. */
+function overallTimeline(scoring) {
+  return bodyweightSeries(scoring)
+    .points.filter((point) => point.overall_index !== null)
+    .map((point) => ({ date: point.date, overall_index: point.overall_index }));
 }
 
 /** The single row for this pair, whichever direction it was sent in. */
@@ -97,8 +124,8 @@ export function listFriends(user) {
 
   const friends = rows
     .filter((row) => row.status === 'accepted')
-    // Alphabetical on purpose. There is no leaderboard here, so there is
-    // nothing to sort by rank.
+    // Alphabetical: this is the address book. The leaderboard orders the
+    // same people by rank on the client.
     .sort((a, b) => a.username.localeCompare(b.username))
     .map((row) => ({
       id: row.id,
@@ -166,11 +193,15 @@ export function publicProfile(viewer, username) {
       visibility: 'stranger',
       friendship,
       created_at: null,
+      details: null,
       overall: null,
       exercises: null,
       index_series: null,
     };
   }
+
+  // Friends always see each other's age, sex, height and current weight.
+  const details = readFriendDetails(identity.id);
 
   if (!identity.ranks_visible_to_friends && !isSelf) {
     return {
@@ -178,6 +209,7 @@ export function publicProfile(viewer, username) {
       visibility: 'ranks_hidden',
       friendship,
       created_at: identity.created_at,
+      details,
       overall: null,
       exercises: null,
       index_series: null,
@@ -192,11 +224,12 @@ export function publicProfile(viewer, username) {
     visibility: isSelf ? 'self' : 'full',
     friendship,
     created_at: identity.created_at,
+    details,
     overall: ranks.overall.complete
       ? { index: ranks.overall.index, rank: ranks.overall.rank }
       : null,
-    // Ranks and indices only. Kilogram loads, estimated maxes, standards and
-    // the bodyweight they were computed from all stay with the owner.
+    // Ranks and indices only. Kilogram loads, estimated maxes and standards
+    // all stay with the owner.
     exercises: ranks.exercises
       .filter((entry) => entry.has_data)
       .map((entry) => ({
@@ -212,6 +245,42 @@ export function publicProfile(viewer, username) {
         date: point.performed_at,
         index: point.strength_index,
       })),
+    })),
+    overall_series: overallTimeline(scoring),
+    thresholds: RANK_THRESHOLDS,
+    // Which days they trained, and how many sets: never what was on the bar.
+    activity: activitySeries(scoring),
+  };
+}
+
+/**
+ * The overall rank over time for you and every friend who shares ranks, for
+ * the comparison chart. Friends with hidden ranks are left out entirely.
+ */
+export function friendsProgress(user) {
+  const friends = all(
+    `SELECT u.id, u.username
+       FROM friendships f
+       JOIN users u
+         ON u.id = CASE WHEN f.requester_id = :me THEN f.addressee_id ELSE f.requester_id END
+      WHERE (f.requester_id = :me OR f.addressee_id = :me)
+        AND f.status = 'accepted'
+        AND u.ranks_visible_to_friends = 1
+      ORDER BY lower(u.username)`,
+    { me: user.id },
+  );
+
+  const people = [
+    { id: user.id, username: user.username, is_self: true },
+    ...friends.map((friend) => ({ id: friend.id, username: friend.username, is_self: false })),
+  ];
+
+  return {
+    thresholds: RANK_THRESHOLDS,
+    people: people.map((person) => ({
+      username: person.username,
+      is_self: person.is_self,
+      points: overallTimeline(readScoringIdentityNeverSerialise(person.id)),
     })),
   };
 }
