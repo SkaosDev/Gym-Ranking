@@ -289,12 +289,12 @@ async function phase5() {
   expect('POST /api/performances creates a set', created.status === 201, created.text.slice(0, 160));
   // Reference case 1, all the way through the HTTP API: a 90 kg man benching
   // 100 kg for 5 gives e1RM 114.58, between Intermediate (109) and Advanced
-  // (137) at 90 kg: index 489.9, Gold V.
+  // (137) at 90 kg: index 489.9, Gold IV.
   expect(
     'reference case 1 reproduces end to end',
     Math.abs((created.json?.e1rm_kg ?? 0) - 114.58) < 0.01 &&
       Math.abs((created.json?.strength_index ?? 0) - 489.9) < 0.1 &&
-      created.json?.rank?.label === 'Gold V',
+      created.json?.rank?.label === 'Gold IV',
     `e1RM ${created.json?.e1rm_kg}, ` +
       `index ${created.json?.strength_index}, rank ${created.json?.rank?.label}`,
   );

@@ -22,7 +22,7 @@ standards at YOUR weight    Strength Level tables, interpolated by bodyweight
         ↓
 strength index 0–1000       interpolated between those standards
         ↓
-rank and division           Iron V … Unkillable Demon King I
+rank and division           Iron IV … Unkillable Demon King I
 ```
 
 Scores are never stored: they are recomputed from the raw sets every time they
@@ -240,11 +240,12 @@ Each rank starts exactly on a standard, so a badge means something concrete:
 | Master | 925–979 | national-level competitor |
 | Unkillable Demon King | 980–1000 | world-record territory |
 
-Each rank splits into five equal divisions, **V** to **I**, with I the highest.
-The division arithmetic is `(max + 1 − min) / 5`, so Silver's 200 points give
-divisions of 40: Silver V is 250–289, Silver I is 410–449. The displayed index
-is always rounded **down**, because rounding 409.5 up to 410 beside a Silver II
-badge reads as a bug.
+Each rank splits into four equal divisions, **IV** to **I**, with I the highest.
+The division arithmetic is `(max + 1 − min) / 4`, so Silver's 200 points give
+divisions of 50: Silver IV is 250–299, Silver I is 400–449. The app shows the
+rank and division, not the index; where the index does appear (on the rank
+explanation page) it is always rounded **down**, because rounding 399.5 up to
+400 beside a Silver II badge reads as a bug.
 
 **What the next division takes.** The engine inverts step 5 at your current
 bodyweight and age, and divides the age coefficient back out, so the figure is
@@ -346,7 +347,7 @@ These are the worked examples the test suite asserts.
 | Age coefficient | ×1.00 (age 24–39) |
 | Standards at 90 kg | 65 / 85 / **109** / **137** / 165 / 255.8 kg |
 | Index | 450 + 200 × (114.58 − 109) / (137 − 109) = **489.9** |
-| Rank | **Gold V** |
+| Rank | **Gold IV** |
 
 ### Case 2 — Woman, 20, 50 kg. One strict pull-up
 
@@ -369,7 +370,7 @@ These are the worked examples the test suite asserts.
 | Adjusted 1RM | 120.6 kg |
 | Standards at 90 kg | 88 / **105** / **125** / 147 / 169 / 208.5 kg |
 | Index | **406.0** |
-| Rank | **Silver II** |
+| Rank | **Silver I** |
 
 ### Case 4 — Man, 25, 72 kg. Push-ups with 20 kg × 10
 
@@ -382,7 +383,7 @@ The case that exposed the previous calibration, which rated it world-class.
 | Standards at 72 kg | 54.1 / **76.8** / **106.9** / 143.2 / 181.2 / 248.8 kg |
 | … the same as reps | 5 / **20** / **40** / 63 / 88 / 132 strict push-ups |
 | Index | **325.1** |
-| Rank | **Silver IV** — equivalent to about 27 strict push-ups |
+| Rank | **Silver III** — equivalent to about 27 strict push-ups |
 
 ---
 

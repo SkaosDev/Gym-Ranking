@@ -114,7 +114,7 @@ describe('creating a performance', () => {
     assert.ok(Math.abs(body.e1rm_kg - 114.58) < 0.01, `e1RM ${body.e1rm_kg}`);
     assert.deepEqual(body.standards_kg.slice(0, 5), [65, 85, 109, 137, 165]);
     assert.ok(Math.abs(body.strength_index - 489.9) < 0.1, `index ${body.strength_index}`);
-    assert.equal(body.rank.label, 'Gold V');
+    assert.equal(body.rank.label, 'Gold IV');
     assert.equal(body.counts_toward_rank, true);
     assert.ok(body.next_division.kg_needed > 0);
   });

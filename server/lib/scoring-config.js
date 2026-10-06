@@ -252,7 +252,7 @@ export const WORLD_CLASS = {
 
 /**
  * Absolute and static: a user's rank never depends on another user's. Each
- * rank splits into five equal divisions, V through I, I being the highest.
+ * rank splits into four equal divisions, IV through I, I being the highest.
  */
 export const RANKS = [
   { name: 'Iron',     min: 0,   max: 99,   color: '#6b7280', meaning: 'below the beginner standard' },
@@ -275,7 +275,7 @@ export const RANKS = [
 ];
 
 /** Lowest to highest, so index 0 of this array is the entry division. */
-export const DIVISIONS = ['V', 'IV', 'III', 'II', 'I'];
+export const DIVISIONS = ['IV', 'III', 'II', 'I'];
 
 // ---------------------------------------------------------------------------
 // Flags attached to a score rather than thrown

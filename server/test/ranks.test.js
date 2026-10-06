@@ -324,7 +324,7 @@ describe('GET /api/ranks/explain', () => {
     assert.equal(index.segment.from.level, 'Intermediate');
     assert.equal(index.segment.to.level, 'Advanced');
     assert.ok(Math.abs(index.result - 489.9) < 0.1);
-    assert.equal(rank.result.label, 'Gold V');
+    assert.equal(rank.result.label, 'Gold IV');
   });
 
   it('explains why a high-rep set does not count', async () => {

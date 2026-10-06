@@ -275,14 +275,14 @@ describe('strength index', () => {
 describe('ranks and divisions', () => {
   it('places every band boundary on the right rank and division', () => {
     const expected = [
-      [0, 'Iron V'], [99, 'Iron I'],
-      [100, 'Bronze V'], [249, 'Bronze I'],
-      [250, 'Silver V'], [449, 'Silver I'],
-      [450, 'Gold V'], [649, 'Gold I'],
-      [650, 'Platinum V'], [824, 'Platinum I'],
-      [825, 'Diamond V'], [924, 'Diamond I'],
-      [925, 'Master V'], [979, 'Master I'],
-      [980, 'Unkillable Demon King V'], [1000, 'Unkillable Demon King I'],
+      [0, 'Iron IV'], [99, 'Iron I'],
+      [100, 'Bronze IV'], [249, 'Bronze I'],
+      [250, 'Silver IV'], [449, 'Silver I'],
+      [450, 'Gold IV'], [649, 'Gold I'],
+      [650, 'Platinum IV'], [824, 'Platinum I'],
+      [825, 'Diamond IV'], [924, 'Diamond I'],
+      [925, 'Master IV'], [979, 'Master I'],
+      [980, 'Unkillable Demon King IV'], [1000, 'Unkillable Demon King I'],
     ];
     for (const [index, label] of expected) {
       assert.equal(indexToRank(index).label, label, `index ${index}`);
@@ -297,20 +297,20 @@ describe('ranks and divisions', () => {
   });
 
   it('reports the next division, and none at the ceiling', () => {
-    assert.equal(indexToRank(449).nextDivision.label, 'Gold V');
-    assert.equal(indexToRank(979).nextDivision.label, 'Unkillable Demon King V');
+    assert.equal(indexToRank(449).nextDivision.label, 'Gold IV');
+    assert.equal(indexToRank(979).nextDivision.label, 'Unkillable Demon King IV');
     assert.equal(indexToRank(1000).nextDivision, null);
   });
 
   it('reports position within the division', () => {
     assert.equal(indexToRank(450).withinDivisionPct, 0);
-    assert.equal(indexToRank(470).withinDivisionPct, 50);
-    closeTo(indexToRank(489).withinDivisionPct, 97.5, 0.1, 'near the top of Gold V');
+    assert.equal(indexToRank(470).withinDivisionPct, 40);
+    closeTo(indexToRank(489).withinDivisionPct, 78, 0.1, 'most of the way through Gold IV');
   });
 });
 
 describe('reference cases', () => {
-  it('man, 25, 90 kg, bench 100 kg x 5 -> Gold V', () => {
+  it('man, 25, 90 kg, bench 100 kg x 5 -> Gold IV', () => {
     const result = scoreLift({
       sex: 'M',
       birthDate: '2001-01-01',
@@ -325,7 +325,7 @@ describe('reference cases', () => {
     assert.equal(result.ageCoefficient, 1);
     // 114.58 kg sits between Intermediate (109) and Advanced (137) at 90 kg.
     closeTo(result.strengthIndex, 489.9, 0.1, 'index');
-    assert.equal(result.rank.label, 'Gold V');
+    assert.equal(result.rank.label, 'Gold IV');
   });
 
   it('woman, 20, 50 kg, one strict pull-up -> Silver III', () => {
@@ -346,7 +346,7 @@ describe('reference cases', () => {
     assert.equal(result.rank.label, 'Silver III');
   });
 
-  it('man, 60, 90 kg, one strict pull-up -> Silver II', () => {
+  it('man, 60, 90 kg, one strict pull-up -> Silver I', () => {
     const result = scoreLift({
       sex: 'M',
       birthDate: '1966-01-01',
@@ -361,10 +361,10 @@ describe('reference cases', () => {
     assert.equal(result.ageCoefficient, 1.34);
     closeTo(result.adjustedE1rmKg, 120.6, 0.01, 'age-adjusted');
     closeTo(result.strengthIndex, 406.0, 0.1, 'index');
-    assert.equal(result.rank.label, 'Silver II');
+    assert.equal(result.rank.label, 'Silver I');
   });
 
-  it('man, 25, 72 kg, push-ups with 20 kg x 10 -> Silver IV, not the top rank', () => {
+  it('man, 25, 72 kg, push-ups with 20 kg x 10 -> Silver III, not the top rank', () => {
     // The case that exposed the old calibration, which made this world-class.
     const result = scoreLift({
       sex: 'M',
@@ -377,7 +377,7 @@ describe('reference cases', () => {
     });
     closeTo(result.effectiveLoadKg, 66.08, 0.01, 'effective load');
     closeTo(result.strengthIndex, 325.1, 0.1, 'index');
-    assert.equal(result.rank.label, 'Silver IV');
+    assert.equal(result.rank.label, 'Silver III');
   });
 
   it('scores bodyweight push-ups like the published rep standards', () => {

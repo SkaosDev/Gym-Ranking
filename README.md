@@ -107,7 +107,7 @@ Seven exercises are tracked: back squat, bench press, deadlift, overhead press,
 pull-up, dip and push-up.
 
 Eight ranks — Iron, Bronze, Silver, Gold, Platinum, Diamond, Master and
-Unkillable Demon King — each split into five divisions, V to I. About forty
+Unkillable Demon King — each split into four divisions, IV to I. About thirty
 steps. The first arrive within weeks; the last is meant to stay out of reach.
 
 **There is no leaderboard.** Ranks are read from fixed, published standards

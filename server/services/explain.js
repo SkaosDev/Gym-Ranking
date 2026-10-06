@@ -191,7 +191,7 @@ export function explainPerformance(user, performanceId) {
   const rank = index === null ? null : indexToRank(index);
   const step6 = {
     title: 'Rank and division',
-    formula: 'each rank spans a fixed index range, split into five equal divisions',
+    formula: 'each rank spans a fixed index range, split into four equal divisions',
     result: rank && {
       index: rank.index,
       rank: rank.rank,
