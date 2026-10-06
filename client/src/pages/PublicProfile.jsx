@@ -1,35 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 
+import ActivityGrid from '../components/ActivityGrid.jsx';
 import AsyncView from '../components/AsyncView.jsx';
 import Card from '../components/Card.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Icon from '../components/Icon.jsx';
-import ProgressBar from '../components/ProgressBar.jsx';
 import RankBadge from '../components/RankBadge.jsx';
+import RankLineChart from '../components/RankLineChart.jsx';
 import { useToast } from '../components/Toast.jsx';
-import {
-  GRID_STROKE,
-  colorForExercise,
-  dateAxisProps,
-  mergeSeries,
-  tooltipProps,
-  valueAxisProps,
-} from '../components/charts.jsx';
-import { exerciseIcon } from '../components/icons.js';
+import { ExerciseList, SummaryTiles, Tiles } from '../components/dashboard.jsx';
 import { api } from '../lib/api.js';
 import { announceFriendsChanged } from '../lib/friendEvents.js';
-import { formatDate, formatIndex } from '../lib/format.js';
+import { formatDate, formatKg, formatNumber } from '../lib/format.js';
+
+/** Age, sex, height and current weight, which friends share. */
+function DetailTiles({ details }) {
+  return (
+    <Tiles
+      tiles={[
+        { label: 'Age', value: details.age, hint: 'years' },
+        { label: 'Sex', value: details.sex === 'F' ? 'Female' : 'Male' },
+        { label: 'Height', value: `${formatNumber(details.height_cm, 0)} cm` },
+        { label: 'Weight', value: details.weight_kg === null ? '\u2014' : formatKg(details.weight_kg) },
+      ]}
+    />
+  );
+}
 
 export default function PublicProfile() {
   const { username } = useParams();
@@ -92,10 +89,6 @@ export default function PublicProfile() {
     );
   }
 
-  const series = profile?.index_series ?? [];
-  const codes = series.map((entry) => entry.code);
-  const chartRows = mergeSeries(series, 'index', 'date');
-
   return (
     <>
       <div className="page-header">
@@ -110,13 +103,8 @@ export default function PublicProfile() {
       <AsyncView status={status} error={error} onRetry={load} loadingLabel="Loading the profile">
         {status === 'ready' && (
           <>
-            {profile.visibility !== 'self' && (
+            {profile.visibility !== 'self' && profile.friendship.status !== 'accepted' && (
               <Card title="Friendship" icon="friends" className="stack-bottom">
-                {profile.friendship.status === 'accepted' && (
-                  <p className="muted">
-                    <Icon name="confirm" /> You are friends, so you can see each other&rsquo;s ranks.
-                  </p>
-                )}
 
                 {profile.friendship.status === 'none' && (
                   <>
@@ -163,6 +151,8 @@ export default function PublicProfile() {
               </Card>
             )}
 
+            {profile.details && <DetailTiles details={profile.details} />}
+
             {profile.visibility === 'ranks_hidden' && (
               <EmptyState icon="info" title="Ranks are private">
                 {username} has chosen not to share ranks with friends.
@@ -171,93 +161,71 @@ export default function PublicProfile() {
 
             {profile.visibility === 'stranger' && (
               <EmptyState icon="info" title="Nothing shared yet">
-                Ranks are only visible between friends. Bodyweight, loads and notes are never
-                shared with anyone.
+                Ranks and stats are only visible between friends. Loads and notes are never shared
+                with anyone.
               </EmptyState>
             )}
 
             {(profile.visibility === 'full' || profile.visibility === 'self') && (
               <>
                 {profile.overall ? (
-                  <Card
-                    title="Overall rank"
-                    icon="record"
-                    accent={profile.overall.rank.color}
-                    className="stack-bottom"
-                  >
-                    <div className="overall__headline">
-                      <RankBadge rank={profile.overall.rank} size="lg" />
-                      <span className="overall__index tabular">
-                        {formatIndex(profile.overall.index)}
-                        <span className="muted"> / 1000</span>
-                      </span>
+                  <section className="hero" style={{ '--hero-color': profile.overall.rank.color }}>
+                    <RankBadge rank={profile.overall.rank} size="lg" layout="stack" />
+                    <div className="hero__main">
+                      <p className="hero__eyebrow">Overall rank</p>
+                      <p className="hero__meaning">{profile.overall.rank.meaning}</p>
                     </div>
-                    <ProgressBar
-                      value={profile.overall.rank.within_division_pct}
-                      color={profile.overall.rank.color}
-                      gradient={profile.overall.rank.gradient}
-                      label={`Progress through ${profile.overall.rank.label}`}
-                    />
-                  </Card>
+                  </section>
                 ) : (
                   <Card title="Overall rank" icon="record" className="stack-bottom">
-                    <p className="muted">
-                      Not enough exercises logged yet for an overall rank.
-                    </p>
+                    <p className="muted">Not enough exercises logged yet for an overall rank.</p>
                   </Card>
                 )}
 
-                <h2 className="section-heading">By exercise</h2>
-                <div className="grid stack-bottom">
-                  {profile.exercises.map((entry) => (
-                    <Card key={entry.code} title={entry.label} faIcon={exerciseIcon(entry.code)} accent={entry.rank.color}>
-                      <div className="row exercise-card__top">
-                        <RankBadge rank={entry.rank} />
-                        <span className="muted tabular exercise-card__index">
-                          {formatIndex(entry.index)}
-                          <span className="muted"> / 1000</span>
-                        </span>
-                      </div>
-                      <ProgressBar
-                        value={entry.rank.within_division_pct}
-                        color={entry.rank.color}
-                        gradient={entry.rank.gradient}
-                        label={`Progress through ${entry.rank.label}`}
-                      />
+                <SummaryTiles activity={profile.activity} />
+
+                <div className="grid grid--2 dashboard-split stack-bottom">
+                  <ExerciseList
+                    exercises={profile.exercises.map((entry) => ({
+                      exercise: { code: entry.code, label: entry.label },
+                      rank: entry.rank,
+                      has_data: true,
+                    }))}
+                    showNext={false}
+                    subtitle={`${username}'s rank on each lift.`}
+                  />
+
+                  <div className="dashboard-side">
+                    <Card
+                      title="Progression"
+                      icon="progress"
+                      subtitle="Overall rank over time."
+                      className="card--fill"
+                    >
+                      {profile.overall_series.length > 1 ? (
+                        <div className="chart-fill">
+                          <RankLineChart
+                            rows={profile.overall_series}
+                            dataKey="overall_index"
+                            thresholds={profile.thresholds}
+                            name="Overall rank"
+                            height="100%"
+                          />
+                        </div>
+                      ) : (
+                        <p className="muted">No overall rank to chart yet.</p>
+                      )}
                     </Card>
-                  ))}
+                  </div>
                 </div>
 
-                {chartRows.length > 1 && (
-                  <Card
-                    title="Strength index over time"
-                    icon="progress"
-                    subtitle="Ranks and indices are shared between friends. Kilograms and bodyweight are not."
-                  >
-                    <ResponsiveContainer width="100%" height={280}>
-                      <LineChart data={chartRows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                        <CartesianGrid stroke={GRID_STROKE} vertical={false} />
-                        <XAxis {...dateAxisProps} />
-                        <YAxis {...valueAxisProps} domain={[0, 1000]} ticks={[0, 250, 500, 750, 1000]} />
-                        <Tooltip {...tooltipProps} />
-                        {series.length > 1 && <Legend wrapperStyle={{ fontSize: 13 }} />}
-                        {series.map((entry) => (
-                          <Line
-                            key={entry.code}
-                            type="monotone"
-                            dataKey={entry.code}
-                            name={entry.label}
-                            stroke={colorForExercise(entry.code, codes)}
-                            strokeWidth={2}
-                            dot={false}
-                            activeDot={{ r: 4 }}
-                            connectNulls
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Card>
-                )}
+                <Card
+                  title="Attendance"
+                  icon="dashboard"
+                  subtitle={`${profile.activity.days.length} training day${profile.activity.days.length === 1 ? '' : 's'} in the last year.`}
+                >
+                  <ActivityGrid days={profile.activity.days} to={profile.activity.to} />
+                </Card>
               </>
             )}
           </>

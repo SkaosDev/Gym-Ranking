@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import AsyncView from '../components/AsyncView.jsx';
@@ -7,13 +7,83 @@ import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import Icon from '../components/Icon.jsx';
 import RankBadge from '../components/RankBadge.jsx';
+import RankLineChart from '../components/RankLineChart.jsx';
 import Spinner from '../components/Spinner.jsx';
 import { useToast } from '../components/Toast.jsx';
+import { SERIES_COLORS } from '../components/charts.jsx';
+import { Leaderboard } from '../components/dashboard.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { ApiError, api } from '../lib/api.js';
 import { announceFriendsChanged } from '../lib/friendEvents.js';
 import { formatDate } from '../lib/format.js';
 
 const SEARCH_MIN = 3;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const PERIODS = [
+  { months: 3, label: '3 months' },
+  { months: 6, label: '6 months' },
+  { months: 12, label: '1 year' },
+];
+
+/** Everyone's overall rank over the chosen period, on one rank scale. */
+function Comparison({ progress }) {
+  const [months, setMonths] = useState(6);
+
+  const { rows, lines } = useMemo(() => {
+    const cutoff = new Date(Date.now() - months * 30.44 * MS_PER_DAY).toISOString().slice(0, 10);
+    const people = progress.people.filter((person) => person.points.some((p) => p.date >= cutoff));
+
+    const byDate = new Map();
+    for (const person of people) {
+      for (const point of person.points) {
+        if (point.date < cutoff) continue;
+        if (!byDate.has(point.date)) byDate.set(point.date, { date: point.date });
+        byDate.get(point.date)[person.username] = point.overall_index;
+      }
+    }
+
+    return {
+      rows: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date)),
+      lines: people.map((person, i) => ({
+        dataKey: person.username,
+        name: person.is_self ? `${person.username} (you)` : person.username,
+        color: SERIES_COLORS[i % SERIES_COLORS.length],
+      })),
+    };
+  }, [progress, months]);
+
+  return (
+    <Card
+      title="Progress compared"
+      icon="progress"
+      subtitle="Overall rank over time, for you and your friends."
+      className="card--fill"
+      actions={
+        <div className="segmented" role="group" aria-label="Period">
+          {PERIODS.map((period) => (
+            <button
+              key={period.months}
+              type="button"
+              className={`segmented__option ${months === period.months ? 'is-active' : ''}`}
+              aria-pressed={months === period.months}
+              onClick={() => setMonths(period.months)}
+            >
+              {period.label}
+            </button>
+          ))}
+        </div>
+      }
+    >
+      {rows.length > 1 ? (
+        <div className="chart-fill">
+          <RankLineChart rows={rows} lines={lines} thresholds={progress.thresholds} height="100%" />
+        </div>
+      ) : (
+        <p className="muted">Nothing to compare over this period yet.</p>
+      )}
+    </Card>
+  );
+}
 
 function PersonRow({ username, children, meta }) {
   return (
@@ -34,6 +104,7 @@ function PersonRow({ username, children, meta }) {
 
 export default function Friends() {
   const toast = useToast();
+  const { user } = useAuth();
 
   const [data, setData] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -50,7 +121,12 @@ export default function Friends() {
     setStatus('loading');
     setError(null);
     try {
-      setData(await api.get('/friends'));
+      const [friends, ranks, progress] = await Promise.all([
+        api.get('/friends'),
+        api.get('/ranks'),
+        api.get('/friends/progress'),
+      ]);
+      setData({ ...friends, overall: ranks.overall, progress });
       setStatus('ready');
     } catch (loadError) {
       setError(loadError.message);
@@ -133,9 +209,18 @@ export default function Friends() {
       <div className="page-header">
         <div>
           <h1>Friends</h1>
-          <p>See your friends&rsquo; ranks. Only ranks are shared, never your body data.</p>
+          <p>How you stack up against your friends, and how everyone is progressing.</p>
         </div>
       </div>
+
+      {status === 'ready' && (
+        <div className="grid grid--2 dashboard-split stack-bottom">
+          <Leaderboard me={user} myOverall={data.overall} friends={data.friends} showFriendsLink={false} />
+          <div className="dashboard-side">
+            <Comparison progress={data.progress} />
+          </div>
+        </div>
+      )}
 
       <Card title="Find someone" icon="friends" className="stack-bottom">
         <div className="field">
