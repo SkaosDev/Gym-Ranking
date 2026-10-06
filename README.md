@@ -72,6 +72,25 @@ plausible training: 13 weigh-ins and 91 sets, bodyweight climbing 78 → 83 kg a
 the overall index 251 → 452. Re-running it recreates that one account and
 touches nothing else.
 
+### The two friend accounts
+
+The demo database also holds two accounts that are friends with each other,
+each with six months of training, so the friends page and the public profile
+have something to compare:
+
+| Account | Email / password | Training | Overall rank |
+|---|---|---|---|
+| **alex** | `alex@gymrank.local` / `alex-password` | Upper/lower split, 4 days a week (~3.6 sessions a week) | Gold II |
+| **lucas** | `lucas@gymrank.local` / `lucas-password` | Full body, 3 days a week (~2.6 sessions a week) | Gold III |
+
+Alex is slightly the stronger of the two. Lucas, being lighter, edges just
+ahead on the squat once bodyweight is accounted for. Both progress steadily:
+each lift is trained with one fixed scheme and the working weight only goes
+up, so the charts climb rather than zigzag.
+
+The database file is git-ignored, so these accounts exist only in the copy
+they were created in.
+
 ---
 
 ## What it does
