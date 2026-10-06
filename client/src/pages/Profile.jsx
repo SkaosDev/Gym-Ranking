@@ -102,7 +102,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="grid stack-bottom">
+      <div className="grid grid--2 stack-bottom">
         <Card title="Log a bodyweight" icon="bodyweight">
           <form onSubmit={submitWeighIn}>
             <div className="field">
