@@ -6,22 +6,23 @@
     <title>GymRank poster</title>
     <style>
       /* One printable A4 page. Sized in millimetres so what prints matches
-         what the screen shows, and system fonts only so nothing is fetched. */
+         what the screen shows, and system fonts only so nothing is fetched.
+         Colours are the app's own tokens from client/src/index.css. */
       @page {
         size: A4 portrait;
         margin: 8mm;
       }
 
       :root {
-        --ink: #14181d;
-        --ink-soft: #4a5560;
-        --ink-faint: #7b8794;
-        --rule: #d6dbe0;
-        --accent: #b8860b;
-        --panel: #f5f6f7;
-        --gold: #c9a227;
+        --bg: #f4f5f7;
+        --surface: #ffffff;
+        --border: #e3e6ea;
+        --text: #14171a;
+        --text-muted: #5b6470;
+        --text-faint: #8a929c;
+        --accent: #2f5bff;
+        --accent-soft: #e8eeff;
         --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-        --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
       }
 
       * {
@@ -30,255 +31,225 @@
 
       body {
         margin: 0;
-        background: #9aa5b1;
-        color: var(--ink);
+        background: #c9ced6;
+        color: var(--text);
         font-family: var(--font);
-        font-size: 8.2pt;
-        line-height: 1.32;
+        font-size: 10pt;
+        line-height: 1.4;
       }
 
       .poster {
         width: 194mm;
         height: 281mm;
         margin: 8mm auto;
-        padding: 7mm 8mm;
-        background: #fff;
+        padding: 11mm 12mm 7mm;
+        background: var(--bg);
         display: flex;
         flex-direction: column;
-        gap: 2.1mm;
+        gap: 6mm;
+      }
+
+      h2 {
+        margin: 0 0 3mm;
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-faint);
       }
 
       /* ------------------------------------------------------------ head */
       header {
-        border-bottom: 1mm solid var(--ink);
-        padding-bottom: 2.2mm;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 8mm;
       }
 
-      .title-row {
+      .brand {
         display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 6mm;
+        align-items: center;
+        gap: 4mm;
+      }
+
+      .logo {
+        width: 14mm;
+        height: 14mm;
+        border-radius: 3mm;
+        background: var(--accent);
+        display: grid;
+        place-items: center;
       }
 
       h1 {
         margin: 0;
-        font-size: 24pt;
-        letter-spacing: -0.02em;
+        font-size: 30pt;
+        letter-spacing: -0.03em;
         line-height: 1;
       }
 
+      .tagline {
+        margin: 3.5mm 0 0;
+        font-size: 12pt;
+        color: var(--text-muted);
+        max-width: 120mm;
+      }
+
       .authors {
-        font-size: 9.5pt;
-        color: var(--ink-soft);
+        margin: 0;
+        font-size: 9pt;
+        color: var(--text-muted);
         text-align: right;
         white-space: nowrap;
       }
 
       .authors strong {
-        color: var(--ink);
-      }
-
-      .tagline {
-        margin: 2.5mm 0 0;
-        font-size: 9.4pt;
-        color: var(--ink-soft);
-        max-width: 138mm;
-      }
-
-      /* ------------------------------------------------------------ grid */
-      .columns {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4mm;
-      }
-
-      .columns--arch {
-        grid-template-columns: 1.55fr 1fr;
-      }
-
-      .feature-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4mm;
-      }
-
-      .example {
-        margin: 1.5mm 0 0;
-        font-size: 7.2pt;
-        color: var(--ink-faint);
-      }
-
-      section h2 {
-        margin: 0 0 1.5mm;
-        font-size: 9pt;
-        letter-spacing: 0.02em;
-        color: var(--accent);
-        border-bottom: 0.3mm solid var(--rule);
-        padding-bottom: 1mm;
-      }
-
-      ul {
-        margin: 0;
-        padding-left: 4.5mm;
-      }
-
-      li {
-        margin-bottom: 1mm;
-      }
-
-      li strong {
-        color: var(--ink);
-      }
-
-      .panel {
-        background: var(--panel);
-        border: 0.3mm solid var(--rule);
-        padding: 2.2mm;
+        color: var(--text);
       }
 
       /* ----------------------------------------------------- screenshots */
       .shots {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 2.5mm;
+        grid-template-columns: 1fr 1fr;
+        gap: 4mm;
       }
 
       figure {
         margin: 0;
       }
 
-      figure img {
-        width: 100%;
-        display: block;
-        border: 0.3mm solid var(--rule);
-        background: #14181d;
-      }
-
-      /* The captures have different shapes, so the page decides the shape
-         rather than the screenshots. */
-      /* Letterboxed on the app's own background, so every shot is fully
-         visible, the boxes still line up, and the padding is invisible. */
-      .shots img {
-        aspect-ratio: 16 / 11;
-        object-fit: contain;
-        object-position: center;
-        padding: 1mm;
-      }
-
-      figcaption {
-        margin-top: 0.8mm;
-        font-size: 6.8pt;
-        color: var(--ink-faint);
-      }
-
-
-
-      /* ---------------------------------------------------- architecture */
-      pre {
-        margin: 0;
-        font-family: var(--mono);
-        font-size: 5.2pt;
-        line-height: 1.22;
-        white-space: pre;
+      .shot {
+        background: var(--surface);
+        border: 0.3mm solid var(--border);
+        border-radius: 3mm;
         overflow: hidden;
       }
 
-      /* ----------------------------------------------------------- facts */
-      .facts {
+      .shot img {
+        width: 100%;
+        display: block;
+      }
+
+      .hero {
+        grid-column: 1 / -1;
+      }
+
+      /* Both side shots get the same box; each fits inside it whole. */
+      .shot--small {
+        height: 50mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .shot--small img {
+        width: auto;
+        max-width: 100%;
+        max-height: 100%;
+      }
+
+      figcaption {
+        margin-top: 1.5mm;
+        font-size: 8.5pt;
+        color: var(--text-faint);
+      }
+
+      /* -------------------------------------------------------- features */
+      .features {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4mm;
+      }
+
+      .feature {
+        background: var(--surface);
+        border: 0.3mm solid var(--border);
+        border-radius: 3mm;
+        padding: 3.5mm 4mm;
+      }
+
+      .feature b {
+        display: block;
+        font-size: 11pt;
+        margin-bottom: 1mm;
+      }
+
+      .feature span {
+        color: var(--text-muted);
+      }
+
+      /* ------------------------------------------------------------ ranks */
+      .ranks {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
         gap: 2mm;
         text-align: center;
-        margin-top: 2.5mm;
-      }
-
-      .fact {
-        border: 0.3mm solid var(--rule);
-        padding: 1.4mm 1mm;
-      }
-
-      .fact b {
-        display: block;
-        font-size: 13pt;
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-      }
-
-      .fact span {
-        font-size: 7.4pt;
-        color: var(--ink-faint);
-      }
-
-      dl {
-        margin: 0;
-        display: grid;
-        grid-template-columns: 26mm 1fr;
-        row-gap: 1.2mm;
-        column-gap: 2mm;
-      }
-
-      dt {
-        color: var(--ink-faint);
-        font-size: 7.6pt;
-      }
-
-      dd {
-        margin: 0;
-        font-size: 7.6pt;
-      }
-
-      .spec {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        font-size: 7.4pt;
-        line-height: 1.26;
-      }
-
-      .spec li {
-        margin-bottom: 0.6mm;
-      }
-
-      .spec b {
-        display: inline-block;
-        min-width: 19mm;
-        color: var(--ink-faint);
+        font-size: 8pt;
         font-weight: 600;
+        line-height: 1.2;
       }
 
-      .ranks {
+      .ranks svg {
+        display: block;
+        width: 9mm;
+        height: auto;
+        margin: 0 auto 1.5mm;
+      }
+
+      .rim {
+        fill: none;
+        stroke: #fff;
+        stroke-opacity: 0.35;
+        stroke-width: 1.4;
+      }
+
+      .line {
+        fill: none;
+        stroke: #fff;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .fill {
+        fill: #fff;
+      }
+
+      .note {
+        margin: 3mm 0 0;
+        text-align: center;
+        font-size: 9pt;
+        color: var(--text-faint);
+      }
+
+      /* ------------------------------------------------------------ built */
+      .chips {
         display: flex;
         flex-wrap: wrap;
-        gap: 1.4mm;
-        margin-top: 1.5mm;
+        gap: 2mm;
       }
 
-      .rank-chip {
-        font-size: 7.2pt;
-        padding: 0.6mm 1.6mm;
-        border-left: 0.9mm solid var(--chip, var(--ink));
-        background: var(--panel);
-        white-space: nowrap;
+      .chip {
+        padding: 1.4mm 3.2mm;
+        border-radius: 99px;
+        background: var(--surface);
+        border: 0.3mm solid var(--border);
+        font-size: 9pt;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .chip--ai {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
       }
 
       footer {
         margin-top: auto;
-        border-top: 0.3mm solid var(--rule);
-        padding-top: 2mm;
-        font-size: 6.8pt;
-        color: var(--ink-faint);
-        display: flex;
-        justify-content: space-between;
-        gap: 5mm;
-      }
-
-      .disclosure {
-        max-width: 118mm;
-      }
-
-      .disclosure b {
-        color: var(--ink-soft);
+        font-size: 7.5pt;
+        color: var(--text-faint);
+        text-align: center;
       }
 
       @media print {
@@ -286,11 +257,12 @@
           background: #fff;
         }
 
-        /* Only the screen margin goes: the 194 x 281mm box and its padding
-           are exactly the A4 printable area at the @page margin above, so
-           nothing reflows between what is previewed and what is printed. */
+        /* Only the screen margin goes: the 194 x 281mm box is exactly the A4
+           printable area at the @page margin above. */
         .poster {
           margin: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
       }
     </style>
@@ -298,169 +270,116 @@
   <body>
     <div class="poster">
       <header>
-        <div class="title-row">
-          <h1>GymRank</h1>
-          <p class="authors">
-            <strong>Cl&eacute;ment Royer</strong><br />
-            <strong>Cyprien Vandel Abeele</strong><br />
-            Software Engineering &middot; Phase 1
-          </p>
+        <div>
+          <div class="brand">
+            <div class="logo">
+              <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M3 9v6M6.5 6.5v11M17.5 6.5v11M21 9v6M6.5 12h11"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
+            <h1>GymRank</h1>
+          </div>
+          <p class="tagline">Your gym logbook, turned into a rank that fits your body.</p>
         </div>
-        <p class="tagline">
-          A local web app that turns a gym logbook into a strength rank calibrated to your sex,
-          bodyweight and age, using the formulas competitive powerlifting actually uses.
+        <p class="authors">
+          <strong>Cl&eacute;ment Royer</strong><br />
+          <strong>Cyprien Vandel Abeele</strong><br />
+          Software Engineering &middot; Phase 1
         </p>
-        <div class="facts">
-        <div class="fact"><b>7</b><span>exercises tracked</span></div>
-        <div class="fact"><b>40</b><span>ranks and divisions</span></div>
-        <div class="fact"><b>177</b><span>automated tests</span></div>
-        <div class="fact"><b>0</b><span>network calls at runtime</span></div>
-        </div>
       </header>
 
       <div class="shots">
-        <figure>
-          <img src="poster/dashboard.png" alt="The overall rank card showing the overall rank badge" />
-          <figcaption>The overall rank, weighted across five lifts.</figcaption>
+        <figure class="hero">
+          <div class="shot">
+            <img src="poster/dashboard.png" alt="The dashboard: overall rank, streaks, ranks by exercise and the friends leaderboard" />
+          </div>
         </figure>
         <figure>
-          <img src="poster/progress.png" alt="A strength index chart rising through coloured rank thresholds" />
-          <figcaption>Six months against the rank thresholds.</figcaption>
+          <div class="shot shot--small">
+            <img src="poster/progress.png" alt="Each lift climbing the rank scale over six months" />
+          </div>
+          <figcaption>Every lift, climbing the ranks.</figcaption>
         </figure>
         <figure>
-          <img src="poster/exercise-card.png" alt="An exercise card showing a Gold IV rank and the kilograms to the next division" />
-          <figcaption>Per exercise: the exact kilograms still needed.</figcaption>
+          <div class="shot shot--small">
+            <img src="poster/friends.png" alt="Overall rank over time for four friends" />
+          </div>
+          <figcaption>Progress, side by side with friends.</figcaption>
         </figure>
       </div>
 
-      <section>
-        <h2>Key features</h2>
-        <div class="feature-grid">
-          <ul>
-            <li>
-              <strong>Calibrated to your body.</strong> Strength standards read at your own
-              bodyweight, plus the Foster and McCulloch age tables, so one pull-up is not one
-              number for everybody.
-            </li>
-            <li>
-              <strong>Absolute, never competitive.</strong> Thresholds are fixed in configuration,
-              so a rank never depends on another user. No leaderboard anywhere.
-            </li>
-            <li>
-              <strong>The next division, in kilograms</strong> &mdash; not just a badge and a bar.
-            </li>
-          </ul>
-          <ul>
-            <li>
-              <strong>Full CRUD with server-side validation</strong>, and a guard that holds an
-              implausible jump out of the rank until a second set confirms it.
-            </li>
-            <li><strong>Progress charts</strong> with rank thresholds behind the curve.</li>
-            <li>
-              <strong>Friends compare ranks.</strong> A leaderboard and progress chart between
-              friends; loads, notes, weight history and date of birth never leave the
-              owner&rsquo;s account.
-            </li>
-          </ul>
+      <section class="features">
+        <div class="feature">
+          <b>Ranked for your body</b>
+          <span>Sex, bodyweight and age, against published strength standards.</span>
         </div>
+        <div class="feature">
+          <b>See what&rsquo;s next</b>
+          <span>The exact kilograms to your next division, on every lift.</span>
+        </div>
+        <div class="feature">
+          <b>Train with friends</b>
+          <span>A leaderboard and their progress. Your loads stay private.</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Eight ranks</h2>
         <div class="ranks">
-          <span class="rank-chip" style="--chip: #8b949e">Iron</span>
-          <span class="rank-chip" style="--chip: #cd7f32">Bronze</span>
-          <span class="rank-chip" style="--chip: #a9a9a9">Silver</span>
-          <span class="rank-chip" style="--chip: #c9a227">Gold</span>
-          <span class="rank-chip" style="--chip: #3fb9a0">Platinum</span>
-          <span class="rank-chip" style="--chip: #3aa3d6">Diamond</span>
-          <span class="rank-chip" style="--chip: #9a5cd0">Master</span>
-          <span class="rank-chip" style="--chip: #ff3b30">Unkillable Demon King</span>
-          <span class="rank-chip" style="--chip: var(--rule)">each split into four divisions, IV to I</span>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#6b7280" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><circle class="line" cx="16" cy="17.5" r="3.2" /></svg>
+            Iron
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#b4652a" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="line" d="M10 16l6 4 6-4" /></svg>
+            Bronze
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#8a94a3" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="line" d="M10 13.25l6 4 6-4M10 18.75l6 4 6-4" /></svg>
+            Silver
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#d4a017" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="line" d="M10 10.5l6 4 6-4M10 16l6 4 6-4M10 21.5l6 4 6-4" /></svg>
+            Gold
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#14b8a6" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="fill" d="m16 10.2 2.1 4.6 5 .5-3.8 3.4 1.1 4.9-4.4-2.6-4.4 2.6 1.1-4.9-3.8-3.4 5-.5Z" /></svg>
+            Platinum
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#0ea5e9" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="fill" d="M11 13.5 13.5 10h5l2.5 3.5-5 9Z" /><path d="M11 13.5h10" stroke="#0ea5e9" stroke-width="1.2" /></svg>
+            Diamond
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#8b5cf6" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="fill" d="M9.5 21.5 8.5 12l4.2 3.6L16 9.8l3.3 5.8 4.2-3.6-1 9.5Z" /></svg>
+            Master
+          </div>
+          <div>
+            <svg viewBox="0 0 32 36"><defs><linearGradient id="udk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dc2626" /><stop offset="1" stop-color="#d4a017" /></linearGradient></defs><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="url(#udk)" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><path class="fill" d="M16 8.5c.6 3.2 4.8 5.3 4.8 9.6a4.8 4.8 0 0 1-9.6 0c0-2 1-3.4 2.2-4.3-.1 1.6.5 2.6 1.5 3 0-3.2.4-5.6 1.1-8.3Z" /></svg>
+            Unkillable Demon King
+          </div>
         </div>
+        <p class="note">Four divisions each, IV to I. The first come in weeks; the last should stay out of reach.</p>
       </section>
-
-      <div class="columns columns--arch">
-        <section>
-          <h2>Architecture</h2>
-          <div class="panel">
-            <pre>
-   Browser                          Express 5 API  (one Node process)                Data
-┌────────────────┐               ┌──────────────────────────────────────────┐   ┌──────────────┐
-│ React 18 SPA   │  fetch /api/* │ routes/      auth · me · performances    │   │  gymrank.db  │
-│ Vite · router  │ ─────────────►│              ranks · stats · friends     │   │              │
-│ recharts       │   JSON only   │ middleware/  requireAuth · validate      │   │  WAL journal │
-│                │               │              jsonOnly · errorHandler     │──►│  foreign     │
-│ 9 routes       │ ◄─────────────│ services/    performances · ranks        │   │  keys on     │
-│                │  session      │              stats · explain · friends   │   │              │
-│                │  cookie:      │ lib/  scoring.js ← pure, no database     │   │  one file    │
-│                │  HttpOnly     │       db.js · password.js · session.js   │   │  beside the  │
-└────────────────┘  SameSite=Lax └──────────────────────────────────────────┘   └──── code ────┘
-   built by Vite, served by Express in production           node:sqlite, built into Node 24</pre>
-          </div>
-        </section>
-
-        <section>
-          <h2>How a set becomes a rank</h2>
-          <div class="panel">
-            <pre>
-bar load + bodyweight factor
-        ↓
-estimated 1RM   Epley and Brzycki,
-                averaged
-        ↓
-age coefficient Foster 14-23
-                McCulloch 40+
-        ↓
-standards at    Strength Level,
-your weight     by bodyweight
-        ↓
-strength index  0-1000, between
-                those standards
-        ↓
-rank + division Iron V … UDK I</pre>
-          </div>
-          <p class="example">
-            90&nbsp;kg man, bench 100&nbsp;kg &times; 5 &rarr; 1RM 114.6&nbsp;kg, between
-            Intermediate (109) and Advanced (137) at 90&nbsp;kg &rarr; index 489 &rarr; Gold&nbsp;V,
-            0.1&nbsp;kg short of Gold&nbsp;IV.
-          </p>
-        </section>
-      </div>
 
       <section>
-        <h2>Tools and platform</h2>
-        <div class="columns">
-          <ul class="spec">
-            <li><b>Assistant</b> Claude Code (Anthropic)</li>
-            <li><b>Runtime</b> Node.js 24</li>
-            <li><b>API</b> Express 5, JSON only</li>
-            <li><b>Database</b> <code>node:sqlite</code>, built in &mdash; nothing to compile</li>
-            <li><b>Frontend</b> React 18, Vite, react-router, recharts</li>
-            <li><b>Styling</b> Font Awesome inline SVG; plain CSS, no framework</li>
-            <li><b>Tests</b> <code>node --test</code>, built in</li>
-          </ul>
-          <ul class="spec">
-            <li><b>Runs on</b> a laptop &mdash; macOS, Windows or Linux</li>
-            <li><b>Install</b> <code>npm run setup</code></li>
-            <li><b>Start</b> <code>npm run build &amp;&amp; npm start</code> &rarr; <code>localhost:3000</code></li>
-            <li><b>Network</b> none: no cloud, no CDN, no container</li>
-            <li><b>Offline</b> verified &mdash; every asset is same-origin</li>
-            <li><b>Data</b> one SQLite file beside the code</li>
-            <li><b>Lifespan</b> Phase 1 only &mdash; the code is discarded after</li>
-          </ul>
-        </div>
+        <h2>Built with</h2>
+        <div class="chips">
+          <span class="chip chip--ai">Vibe-coded with Claude Opus 5.5</span>
+          <span class="chip">Node.js 24</span>
+          <span class="chip">Express 5</span>
+          <span class="chip">React 18 + Vite</span>
+          <span class="chip">SQLite</span>
+          </div>
       </section>
 
-      <footer>
-        <p class="disclosure">
-          <b>Use of generative AI.</b> Built with Claude Code (Anthropic), disclosed as the course
-          requires. The specification, the scoring design and the review at each phase are ours; the
-          assistant wrote code against that specification one phase at a time, each verified with
-          real requests before the next began. Two expected values in our own specification turned
-          out to be wrong, and were corrected once the engine disagreed with them.
-        </p>
-        <p>
-          Estimates are for information only, based on<br />population-level statistical formulas.
-          Not medical advice.
-        </p>
-      </footer>
+      <footer>Statistical estimates for information only. Not medical advice.</footer>
     </div>
   </body>
 </html>
