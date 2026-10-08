@@ -54,9 +54,9 @@ function Comparison({ progress }) {
 
   return (
     <Card
-      title="Progress compared"
+      title="Progressing together"
       icon="progress"
-      subtitle="Overall rank over time, for you and your friends."
+      subtitle="Everyone's overall rank over time. Push each other on."
       className="card--fill"
       actions={
         <div className="segmented" role="group" aria-label="Period">

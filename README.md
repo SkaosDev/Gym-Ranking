@@ -1,7 +1,10 @@
 # GymRank
 
-A local web app that turns a gym logbook into a strength rank measured against
-published strength standards for your own sex and bodyweight, adjusted for age.
+A local web app that turns a gym logbook into a motivation system: a strength
+rank measured against published strength standards for your own sex and
+bodyweight, adjusted for age, with a clear next step on every lift. The point
+is not to beat anyone but to always have a goal within reach and friends to
+train alongside.
 
 One pull-up by a 20-year-old woman at 50 kg and one pull-up by a 60-year-old man
 at 90 kg are not the same achievement. A logbook that records "1 pull-up" for

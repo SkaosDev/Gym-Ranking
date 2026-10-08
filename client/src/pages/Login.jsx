@@ -36,7 +36,7 @@ export default function Login() {
         <p className="auth-brand">
           <Icon name="brand" /> GymRank
         </p>
-        <p className="auth-tagline">Find out how strong you really are.</p>
+        <p className="auth-tagline">A rank that grows with you, one session at a time.</p>
       </div>
 
       <Card title="Log in">

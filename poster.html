@@ -42,11 +42,11 @@
         width: 194mm;
         height: 281mm;
         margin: 8mm auto;
-        padding: 11mm 12mm 7mm;
+        padding: 9mm 12mm 6mm;
         background: var(--bg);
         display: flex;
         flex-direction: column;
-        gap: 6mm;
+        gap: 4mm;
       }
 
       h2 {
@@ -136,7 +136,7 @@
 
       /* Both side shots get the same box; each fits inside it whole. */
       .shot--small {
-        height: 50mm;
+        height: 42mm;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -154,6 +154,42 @@
         color: var(--text-faint);
       }
 
+      /* ------------------------------------------------------------ basis */
+      .basis {
+        display: flex;
+        align-items: center;
+        gap: 5mm;
+        padding: 3mm 5mm;
+        border-radius: 3mm;
+        background: var(--accent-soft);
+        border: 0.3mm solid var(--accent);
+      }
+
+      .basis p {
+        margin: 0;
+        flex: 1;
+        font-size: 10pt;
+      }
+
+      .basis strong {
+        color: var(--accent);
+      }
+
+      .factors {
+        display: flex;
+        gap: 2mm;
+      }
+
+      .factor {
+        padding: 1.6mm 3.4mm;
+        border-radius: 99px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 9.5pt;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
       /* -------------------------------------------------------- features */
       .features {
         display: grid;
@@ -165,7 +201,7 @@
         background: var(--surface);
         border: 0.3mm solid var(--border);
         border-radius: 3mm;
-        padding: 3.5mm 4mm;
+        padding: 3mm 4mm;
       }
 
       .feature b {
@@ -215,34 +251,21 @@
         fill: #fff;
       }
 
-      .note {
-        margin: 3mm 0 0;
-        text-align: center;
-        font-size: 9pt;
-        color: var(--text-faint);
-      }
-
       /* ------------------------------------------------------------ built */
       .chips {
         display: flex;
         flex-wrap: wrap;
-        gap: 2mm;
+        gap: 1.5mm;
       }
 
       .chip {
-        padding: 1.4mm 3.2mm;
+        padding: 1mm 2.6mm;
         border-radius: 99px;
         background: var(--surface);
         border: 0.3mm solid var(--border);
-        font-size: 9pt;
+        font-size: 8pt;
         font-weight: 600;
         color: var(--text-muted);
-      }
-
-      .chip--ai {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: #fff;
       }
 
       footer {
@@ -285,7 +308,7 @@
             </div>
             <h1>GymRank</h1>
           </div>
-          <p class="tagline">Your gym logbook, turned into a rank that fits your body.</p>
+          <p class="tagline">A rank that grows with you, so there is always a next step worth training for.</p>
         </div>
         <p class="authors">
           <strong>Cl&eacute;ment Royer</strong><br />
@@ -297,40 +320,52 @@
       <div class="shots">
         <figure class="hero">
           <div class="shot">
-            <img src="poster/dashboard.png" alt="The dashboard: overall rank, streaks, ranks by exercise and the friends leaderboard" />
+            <img src="poster/dashboard.png" alt="The dashboard: overall rank, streaks, the next step on each lift and friends training alongside" />
           </div>
         </figure>
         <figure>
           <div class="shot shot--small">
             <img src="poster/progress.png" alt="Each lift climbing the rank scale over six months" />
           </div>
-          <figcaption>Every lift, climbing the ranks.</figcaption>
+          <figcaption>Every session moves you up. You can see it.</figcaption>
         </figure>
         <figure>
           <div class="shot shot--small">
             <img src="poster/friends.png" alt="Overall rank over time for four friends" />
           </div>
-          <figcaption>Progress, side by side with friends.</figcaption>
+          <figcaption>Friends who keep each other going.</figcaption>
         </figure>
       </div>
 
+      <section class="basis">
+        <div class="factors">
+          <span class="factor">Sex</span>
+          <span class="factor">Bodyweight</span>
+          <span class="factor">Age</span>
+        </div>
+        <p>
+          <strong>Every rank is calculated for your body.</strong> The same lift means more at 50&nbsp;kg or
+          at sixty, so you chase your own progress, not someone else&rsquo;s genetics.
+        </p>
+      </section>
+
       <section class="features">
         <div class="feature">
-          <b>Ranked for your body</b>
-          <span>Sex, bodyweight and age, against published strength standards.</span>
+          <b>Fair from day one</b>
+          <span>Beginner or veteran, always a rank within reach.</span>
         </div>
         <div class="feature">
-          <b>See what&rsquo;s next</b>
+          <b>A clear next goal</b>
           <span>The exact kilograms to your next division, on every lift.</span>
         </div>
         <div class="feature">
-          <b>Train with friends</b>
-          <span>A leaderboard and their progress. Your loads stay private.</span>
+          <b>Motivated together</b>
+          <span>Push each other on. Your loads stay private.</span>
         </div>
       </section>
 
       <section>
-        <h2>Eight ranks</h2>
+        <h2>Eight ranks to work through</h2>
         <div class="ranks">
           <div>
             <svg viewBox="0 0 32 36"><path d="M16 1.5 29.5 6.5V17c0 8.6-6 14.6-13.5 17.5C8.5 31.6 2.5 25.6 2.5 17V6.5Z" fill="#6b7280" /><path class="rim" d="M16 4.6 27 8.7V17c0 7.1-4.8 12.2-11 14.8C9.8 29.2 5 24.1 5 17V8.7Z" /><circle class="line" cx="16" cy="17.5" r="3.2" /></svg>
@@ -365,18 +400,23 @@
             Unkillable Demon King
           </div>
         </div>
-        <p class="note">Four divisions each, IV to I. The first come in weeks; the last should stay out of reach.</p>
       </section>
 
       <section>
         <h2>Built with</h2>
         <div class="chips">
-          <span class="chip chip--ai">Vibe-coded with Claude Opus 5.5</span>
+          <span class="chip">Claude Opus 5.5</span>
           <span class="chip">Node.js 24</span>
           <span class="chip">Express 5</span>
-          <span class="chip">React 18 + Vite</span>
-          <span class="chip">SQLite</span>
-          </div>
+          <span class="chip">express-session</span>
+          <span class="chip">SQLite (node:sqlite)</span>
+          <span class="chip">scrypt</span>
+          <span class="chip">React 18</span>
+          <span class="chip">React Router 7</span>
+          <span class="chip">Vite 6</span>
+          <span class="chip">Recharts</span>
+          <span class="chip">Font Awesome</span>
+        </div>
       </section>
 
       <footer>Statistical estimates for information only. Not medical advice.</footer>

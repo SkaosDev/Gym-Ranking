@@ -104,9 +104,9 @@ export function Leaderboard({ me, myOverall, friends, showFriendsLink = true }) 
 
   return (
     <Card
-      title="Leaderboard"
+      title="Training together"
       icon="friends"
-      subtitle="You and your friends, by overall rank."
+      subtitle="Where you and your friends are on the way up."
       actions={
         showFriendsLink && (
           <Link to="/friends" className="card__link">
@@ -116,8 +116,8 @@ export function Leaderboard({ me, myOverall, friends, showFriendsLink = true }) 
       }
     >
       {friends.length === 0 ? (
-        <EmptyState icon="friends" title="Nobody to compare with yet">
-          Add a friend to see how you stack up.
+        <EmptyState icon="friends" title="Train with friends">
+          Add a friend and keep each other motivated.
         </EmptyState>
       ) : (
         <ol className="leaderboard">
